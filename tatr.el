@@ -46,17 +46,15 @@
   (let ((line (thing-at-point 'line)))
     (cond
      ((string-match "\\(.*\\)TODO:\\(.*\\)" line)
-      (ignore
-       (let* ((prefix (match-string 1 line))
-              (title (string-trim (match-string 2 line)))
-              (task (tatr-create title)))
-         (when task
-           (let ((huid (car task))
-                 (task-md-path (cdr task)))
-             (delete-line)
-             (insert (format "%sTASK(%s): %s\n" prefix huid title))
-             (find-file-other-window task-md-path)))))
-      (not (message "Temporarily ignored")))
+      (let* ((prefix (match-string 1 line))
+             (title (string-trim (match-string 2 line)))
+             (task (tatr-create title)))
+        (when task
+          (let ((huid (car task))
+                (task-md-path (cdr task)))
+            (delete-line)
+            (insert (format "%sTASK(%s): %s\n" prefix huid title))
+            (find-file-other-window task-md-path)))))
      ((string-match (concat "\\(.*\\)TODO("       ; prefix
                             "\\([0-9]\\{4\\}\\)-" ; year
                             "\\([0-9]\\{2\\}\\)-" ; month
