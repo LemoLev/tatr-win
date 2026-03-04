@@ -1,7 +1,7 @@
 # Priority becomes irrelevant when the task is closed
 
 - STATUS: OPEN
-- PRIORITY: 100
+- PRIORITY: 90
 
 When you do `tatr ls -c` you get the list of closed tasks which is
 still sorted by the priority. But as soon as the task is closed, the
