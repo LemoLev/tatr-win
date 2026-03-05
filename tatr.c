@@ -189,6 +189,22 @@ typedef struct {
     size_t capacity;
 } Tasks;
 
+static void print_task(const char *rel_path, Task *task)
+{
+    if (task->tags.count) {
+        static String_Builder sb = {0};
+        sb.count = 0;
+        for (size_t i = 0; i < task->tags.count; ++i) {
+            if (i > 0) sb_appendf(&sb, ",");
+            sb_appendf(&sb, SV_Fmt, SV_Arg(task->tags.items[i]));
+        }
+        sb_append_null(&sb);
+        printf("%s/%s/TASK.md:1: [PRIORITY: %-3d, TAGS: %s] %s\n", rel_path, task->id, task->priority, sb.items, task->title);
+    } else {
+        printf("%s/%s/TASK.md:1: [PRIORITY: %-3d] %s\n", rel_path, task->id, task->priority, task->title);
+    }
+}
+
 static const char *find_tasks_database(void)
 {
     const char *dir = get_current_dir_temp();
@@ -411,18 +427,7 @@ static bool ls_run(Command *self, const char *program_name, int argc, char **arg
             }
         }
         if (!matches) continue;
-        if (task.tags.count) {
-            static String_Builder sb = {0};
-            sb.count = 0;
-            for (size_t i = 0; i < task.tags.count; ++i) {
-                if (i > 0) sb_appendf(&sb, ",");
-                sb_appendf(&sb, SV_Fmt, SV_Arg(task.tags.items[i]));
-            }
-            sb_append_null(&sb);
-            printf("%s/%s/TASK.md:1: [PRIORITY: %-3d, TAGS: %s] %s\n", rel_path, task.id, task.priority, sb.items, task.title);
-        } else {
-            printf("%s/%s/TASK.md:1: [PRIORITY: %-3d] %s\n", rel_path, task.id, task.priority, task.title);
-        }
+        print_task(rel_path, &task);
     }
     return true;
 }
@@ -532,7 +537,42 @@ static bool fill_run(Command *self, const char *program_name, int argc, char **a
         if (exists < 0) return false;
         if (exists) continue;
         if (!write_entire_file(task_md_path, task_content, task_content_size)) return false;
+        // TASK(20260304-175344): `tatr new` prints the full path to TASK.md instead of relative one like `tatr ls`
         printf("%s:1: \"%s\" created\n", task_md_path, task_title);
+    }
+    return true;
+}
+
+static bool find_run(Command *self, const char *program_name, int argc, char **argv)
+{
+    if (argc < 0) {
+        fprintf(stderr, "Usage: %s %s <HUID>\n", program_name, self->name);
+        return false;
+    }
+
+    const char *huid = shift(argv, argc);
+
+    const char *dir_path = find_tasks_database();
+    if (!dir_path) return false;
+
+    const char *cwd_path = get_current_dir_temp();
+    if (!cwd_path) return false;
+
+    const char *rel_path = relative_path(dir_path, cwd_path);
+
+    Tasks tasks = {0};
+    if (!load_tasks(&tasks, dir_path)) return false;
+
+    bool found = false;
+    da_foreach(Task, task, &tasks) {
+        if (strcmp(task->id, huid) == 0) {
+            print_task(rel_path, task);
+            found = true;
+        }
+    }
+    if (!found) {
+        fprintf(stderr, "ERROR: no tasks with HUID %s are found\n", huid);
+        return false;
     }
     return true;
 }
@@ -654,6 +694,11 @@ static Command commands[] = {
         .name = "fill",
         .description = "Find all the empty valid task folder and create TASK.md in them",
         .run = fill_run,
+    },
+    {
+        .name = "find",
+        .description = "Find the task with a given HUID",
+        .run = find_run,
     },
     {
         .name = "summary",
