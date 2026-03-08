@@ -362,6 +362,16 @@ static void print_command_usage(Command *command, const char *program_name, void
     flag_c_print_options(c, stderr);
 }
 
+static bool init_run(Command *self, const char *program_name, int argc, char **argv)
+{
+    UNUSED(self);
+    UNUSED(program_name);
+    UNUSED(argc);
+    UNUSED(argv);
+    if (!mkdir_if_not_exists("./tasks/")) return false;
+    return true;
+}
+
 static bool ls_run(Command *self, const char *program_name, int argc, char **argv)
 {
     Flag_List tags = {0};
@@ -689,6 +699,11 @@ static bool summary_run(Command *self, const char *program_name, int argc, char 
 static bool help_run(Command *self, const char *program_name, int argc, char **argv);
 
 static Command commands[] = {
+    {
+        .name = "init",
+        .description = "Current tasks/ directory in the current working directory if it doesn't exist yet",
+        .run = init_run,
+    },
     {
         .name = "ls",
         .signature = "[OPTIONS]",
