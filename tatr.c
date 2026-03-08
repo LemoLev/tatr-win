@@ -144,24 +144,6 @@ static char *task_md_extract_field(Md *md, char *field)
     return md_dup_text_until_newline(md);
 }
 
-static void append_default_task_md_content(String_Builder *sb, const char *task_title, int priority, const char **tags, size_t tags_count)
-{
-    sb_appendf(sb, "# %s\n", task_title);
-    sb_appendf(sb, "\n");
-    sb_appendf(sb, "- STATUS: OPEN\n");
-    sb_appendf(sb, "- PRIORITY: %d\n", priority);
-    if (tags_count > 0) {
-        sb_appendf(sb, "- TAGS: ");
-        for (size_t i = 0; i < tags_count; ++i) {
-            if (i > 0) sb_appendf(sb, ",");
-            sb_appendf(sb, tags[i]);
-        }
-        sb_appendf(sb, "\n");
-    }
-    sb_appendf(sb, "\n");
-    sb_appendf(sb, "No description.\n");
-}
-
 typedef struct {
     String_View *items;
     size_t count;
@@ -183,6 +165,24 @@ typedef struct {
     Tags tags;
     int priority;
 } Task;
+
+static void append_task_md_content(String_Builder *sb, Task task)
+{
+    sb_appendf(sb, "# %s\n", task.title);
+    sb_appendf(sb, "\n");
+    sb_appendf(sb, "- STATUS: %s\n", task.status);
+    sb_appendf(sb, "- PRIORITY: %d\n", task.priority);
+    if (task.tags.count > 0) {
+        sb_appendf(sb, "- TAGS: ");
+        for (size_t i = 0; i < task.tags.count; ++i) {
+            if (i > 0) sb_appendf(sb, ",");
+            sb_append_buf(sb, task.tags.items[i].data, task.tags.items[i].count);
+        }
+        sb_appendf(sb, "\n");
+    }
+    sb_appendf(sb, "\n");
+    sb_appendf(sb, "No description.\n");
+}
 
 // TASK(20260308-163429): Tasks array should be a hash table
 typedef struct {
@@ -423,7 +423,7 @@ static bool new_run(Command *self, const char *program_name, int argc, char **ar
     flag_c_list_var(c, &tags, "t", "Tags to add to the new task");
     flag_c_uint64_var(c, &priority, "p", DEFAULT_PRIORITY, "Priority of the new task");
     flag_c_bool_var(c, &help, "help", false, "Print this help message");
-    String_Builder sb_task_title = {0};
+    String_Builder sb_title = {0};
 
     while (argc > 0) {
         if (!flag_c_parse(c, argc, argv)) {
@@ -436,8 +436,8 @@ static bool new_run(Command *self, const char *program_name, int argc, char **ar
         argv = flag_c_rest_argv(c);
 
         if (argc > 0) {
-            if (sb_task_title.count > 0) sb_append(&sb_task_title, ' ');
-            sb_append_cstr(&sb_task_title, shift(argv, argc));
+            if (sb_title.count > 0) sb_append(&sb_title, ' ');
+            sb_append_cstr(&sb_title, shift(argv, argc));
         }
     }
 
@@ -468,15 +468,33 @@ static bool new_run(Command *self, const char *program_name, int argc, char **ar
     }
     if (!mkdir_if_not_exists(task_path)) return false;
     String_Builder sb = {0};
-    const char *task_title = DEFAULT_TASK_TITLE;
-    if (sb_task_title.count > 0) {
-        sb_append_null(&sb_task_title);
-        task_title = sb_task_title.items;
+    const char *title = DEFAULT_TASK_TITLE;
+    if (sb_title.count > 0) {
+        sb_append_null(&sb_title);
+        title = sb_title.items;
     }
-    append_default_task_md_content(&sb, task_title, priority, tags.items, tags.count);
+
+    Task task = {
+        .id       = id,
+        .title    = title,
+        .status   = "OPEN",
+        .priority = priority,
+    };
+
+    da_foreach(const char *, tag, &tags) {
+        da_append(&task.tags, sv_from_cstr(*tag));
+    }
+
+    append_task_md_content(&sb, task);
     const char *task_md_path = temp_sprintf("%s/%s/TASK.md", dir_path, id);
     if (!write_entire_file(task_md_path, sb.items, sb.count)) return false;
-    printf("%s:1: \"%s\" created\n", task_md_path, task_title);
+
+    const char *cwd_path = get_current_dir_temp();
+    if (!cwd_path) return false;
+
+    const char *rel_path = relative_path(dir_path, cwd_path);
+
+    print_task(rel_path, &task);
     return true;
 }
 

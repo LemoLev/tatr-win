@@ -1,6 +1,6 @@
 # `tatr new` prints the full path to TASK.md instead of relative one like `tatr ls`
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 90
 - TAGS: bug
 
