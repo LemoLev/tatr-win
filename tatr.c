@@ -372,22 +372,35 @@ static bool init_run(Command *self, const char *program_name, int argc, char **a
     return true;
 }
 
+bool task_matches_tags(const Task *task, const char **tags, size_t tags_count)
+{
+    for (size_t j = 0; j < tags_count; ++j) {
+        if (!tags_contains(task->tags, sv_from_cstr(tags[j]))) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static bool ls_run(Command *self, const char *program_name, int argc, char **argv)
 {
     Flag_List tags = {0};
     bool closed = false;
     bool ascending = false;
     bool help = false;
+
     void *c = flag_c_new(program_name);
     flag_c_bool_var(c, &closed, "c", false, "List closed tasks");
     flag_c_bool_var(c, &ascending, "a", false, "List tasks in ascending order");
-    flag_c_list_var(c, &tags, "t", "Tags to filter tasks by");
+    flag_c_list_var(c, &tags, "t", "Show only tasks with these tags");
     flag_c_bool_var(c, &help, "help", false, "Print this help message");
+
     if (!flag_c_parse(c, argc, argv)) {
         print_command_usage(self, program_name, c);
         flag_c_print_error(c, stderr);
         return false;
     }
+
     if (help) {
         print_command_usage(self, program_name, c);
         return true;
@@ -412,13 +425,7 @@ static bool ls_run(Command *self, const char *program_name, int argc, char **arg
     size_t tasks_matched = 0;
     da_foreach(Task, task, &tasks) {
         if (strcmp(task->status, closed ? "CLOSED" : "OPEN") != 0) continue;
-        bool matches = true;
-        for (size_t j = 0; matches && j < tags.count; ++j) {
-            if (!tags_contains(task->tags, sv_from_cstr(tags.items[j]))) {
-                matches = false;
-            }
-        }
-        if (!matches) continue;
+        if (!task_matches_tags(task, tags.items, tags.count)) continue;
         print_task(rel_path, task);
         tasks_matched += 1;
     }
