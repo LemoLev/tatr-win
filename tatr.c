@@ -398,18 +398,25 @@ static bool ls_run(Command *self, const char *program_name, int argc, char **arg
     } else {
         qsort(tasks.items, tasks.count, sizeof(*tasks.items), task_compare_priority_reverse);
     }
-    for (size_t i = 0; i < tasks.count; ++i) {
-        Task task = tasks.items[i];
-        if (strcmp(task.status, closed ? "CLOSED" : "OPEN") != 0) continue;
+
+    size_t tasks_matched = 0;
+    da_foreach(Task, task, &tasks) {
+        if (strcmp(task->status, closed ? "CLOSED" : "OPEN") != 0) continue;
         bool matches = true;
         for (size_t j = 0; matches && j < tags.count; ++j) {
-            if (!tags_contains(tasks.items[i].tags, sv_from_cstr(tags.items[j]))) {
+            if (!tags_contains(task->tags, sv_from_cstr(tags.items[j]))) {
                 matches = false;
             }
         }
         if (!matches) continue;
-        print_task(rel_path, &task);
+        print_task(rel_path, task);
+        tasks_matched += 1;
     }
+
+    if (tasks_matched == 0) {
+        printf("No tasks were found\n");
+    }
+
     return true;
 }
 
@@ -664,12 +671,16 @@ static bool summary_run(Command *self, const char *program_name, int argc, char 
     const char *status = closed ? "CLOSED" : "OPEN";
     printf("STATUS:   %s\n",  status);
     printf("TOTAL:    %zu\n", total_count);
-    printf("UNTAGGED: %zu\n", untagged_count);
-    printf("TAGGED:\n");
-    size_t mark = temp_save();
-    da_foreach(Tag_Count, tag_count, &sorted_tags_count) {
-        temp_rewind(mark);
-        printf("    %*s => %zu\n", (int)max_width, temp_sv_to_cstr(tag_count->tag), tag_count->count);
+    if (untagged_count > 0) {
+        printf("UNTAGGED: %zu\n", untagged_count);
+    }
+    if (sorted_tags_count.count > 0) {
+        printf("TAGGED:\n");
+        size_t mark = temp_save();
+        da_foreach(Tag_Count, tag_count, &sorted_tags_count) {
+            temp_rewind(mark);
+            printf("    %*s => %zu\n", (int)max_width, temp_sv_to_cstr(tag_count->tag), tag_count->count);
+        }
     }
 
     return true;
@@ -691,16 +702,16 @@ static Command commands[] = {
         .run = new_run,
     },
     {
-        .name = "find",
-        .signature = "<HUID> [OPTIONS]",
-        .description = "Find the task with a given HUID",
-        .run = find_run,
-    },
-    {
         .name = "summary",
         .signature = "[OPTIONS]",
         .description = "Print the summary of the tasks",
         .run = summary_run,
+    },
+    {
+        .name = "find",
+        .signature = "<HUID> [OPTIONS]",
+        .description = "Find the task with a given HUID",
+        .run = find_run,
     },
     {
         .name = "help",
@@ -736,8 +747,14 @@ static bool help_run(Command *self, const char *program_name, int argc, char **a
 int main(int argc, char **argv)
 {
     const char *program_name = shift(argv, argc);
-    const char *command_name = "ls";
-    if (argc > 0) command_name = shift(argv, argc);
+
+    if (argc <= 0) {
+        print_available_commands(ERROR);
+        nob_log(ERROR, "No command is provided");
+        return 0;
+    }
+
+    const char *command_name = shift(argv, argc);
 
     for (size_t i = 0; i < ARRAY_LEN(commands); ++i) {
         if (strcmp(command_name, commands[i].name) == 0) {
@@ -746,8 +763,8 @@ int main(int argc, char **argv)
         }
     }
 
-    nob_log(ERROR, "Unknown command `%s`", command_name);
     print_available_commands(ERROR);
+    nob_log(ERROR, "Unknown command `%s`", command_name);
     return 1;
 }
 #else
