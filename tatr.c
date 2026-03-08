@@ -10,7 +10,8 @@
 #define DEFAULT_TASK_TITLE "New Task"
 #define DEFAULT_PRIORITY 100
 
-static inline bool is_valid_task_id(const char *id)
+#define HUID_REGEXP_FOR_USER_REPORT_PURPOSES "/[0-9]{8}-[0-9]{6}/"
+static inline bool is_valid_huid(const char *id)
 {
     for (int i = 0; i < 8; ++i) if (!isdigit(*id++)) return false;
     if (*id++ != '-')                                return false;
@@ -183,6 +184,7 @@ typedef struct {
     int priority;
 } Task;
 
+// TASK(20260308-163429): Tasks array should be a hash table
 typedef struct {
     Task *items;
     size_t count;
@@ -234,7 +236,7 @@ static bool load_tasks(Tasks *tasks, const char *dir_path)
     for (size_t i = 0; i < children.count; ++i) {
         const char *id = children.items[i];
         if (*id == '.') continue;
-        if (!is_valid_task_id(id)) continue;
+        if (!is_valid_huid(id)) continue;
         const char *task_path = temp_sprintf("%s/%s", dir_path, id);
         File_Type type = get_file_type(task_path);
         if (type < 0) return false;
@@ -298,6 +300,7 @@ typedef struct Command Command;
 struct Command {
     const char *name;
     const char *description;
+    const char *signature;
     bool (*run)(Command *self, const char *program_name, int argc, char **argv);
 };
 
@@ -352,33 +355,9 @@ static const char *relative_path(const char *dst_path, const char *src_path)
 
 static void print_command_usage(Command *command, const char *program_name, void *c)
 {
-    fprintf(stderr, "Usage: %s %s [OPTIONS]\n", program_name, command->name);
+    fprintf(stderr, "Usage: %s %s %s\n", program_name, command->name, command->signature);
     fprintf(stderr, "OPTIONS:\n");
     flag_c_print_options(c, stderr);
-}
-
-static bool path_run(Command *self, const char *program_name, int argc, char **argv)
-{
-    UNUSED(self);
-    UNUSED(program_name);
-    if (argc <= 0) {
-        nob_log(ERROR, "No task id is provided");
-        return false;
-    }
-    const char *task_id = shift(argv, argc);
-    if (!is_valid_task_id(task_id)) {
-        nob_log(ERROR, "`%s` is not a valid task id", task_id);
-        return false;
-    }
-    const char *dir_path = find_tasks_database();
-    if (!dir_path) return false;
-    const char *task_md_path = temp_sprintf("%s/%s/TASK.md", dir_path, task_id);
-    if (!file_exists(task_md_path)) {
-        nob_log(ERROR, "Task %s does not exist", task_id);
-        return false;
-    }
-    printf("%s\n", task_md_path);
-    return true;
 }
 
 static bool ls_run(Command *self, const char *program_name, int argc, char **argv)
@@ -499,58 +478,53 @@ static bool new_run(Command *self, const char *program_name, int argc, char **ar
     return true;
 }
 
-static bool fill_run(Command *self, const char *program_name, int argc, char **argv)
-{
-    UNUSED(self);
-    UNUSED(program_name);
-
-    File_Paths children = {0};
-    String_Builder sb = {0};
-
-    const char *task_title = DEFAULT_TASK_TITLE;
-    if (argc > 0) task_title = shift(argv, argc);
-
-    append_default_task_md_content(&sb, task_title, DEFAULT_PRIORITY, NULL, 0);
-    const char *task_content = temp_strndup(sb.items, sb.count);
-    size_t task_content_size = sb.count;
-    sb.count = 0;
-
-    const char *dir_path = find_tasks_database();
-    if (!dir_path) return false;
-    if (!read_entire_dir(dir_path, &children)) return false;
-    size_t mark = temp_save();
-    for (size_t i = 0; i < children.count; ++i) {
-        temp_rewind(mark);
-        const char *id = children.items[i];
-        if (*id == '.') continue;
-        if (!is_valid_task_id(id)) continue;
-        const char *task_path = temp_sprintf("%s/%s", dir_path, id);
-        File_Type type = get_file_type(task_path);
-        if (type < 0) return false;
-        if (type != FILE_DIRECTORY) {
-            nob_log(ERROR, "%s is not a directory", task_path);
-            return false;
-        }
-        sb.count = 0;
-        const char *task_md_path = temp_sprintf("%s/%s/TASK.md", dir_path, id);
-        int exists = file_exists(task_md_path);
-        if (exists < 0) return false;
-        if (exists) continue;
-        if (!write_entire_file(task_md_path, task_content, task_content_size)) return false;
-        // TASK(20260304-175344): `tatr new` prints the full path to TASK.md instead of relative one like `tatr ls`
-        printf("%s:1: \"%s\" created\n", task_md_path, task_title);
-    }
-    return true;
-}
-
 static bool find_run(Command *self, const char *program_name, int argc, char **argv)
 {
-    if (argc < 0) {
-        fprintf(stderr, "Usage: %s %s <HUID>\n", program_name, self->name);
-        return false;
+    bool help = false;
+    bool path_only = false;
+
+    void *c = flag_c_new(program_name);
+    flag_c_bool_var(c, &path_only, "path-only", false, "Print only path to TASK.md");
+    flag_c_bool_var(c, &help, "help", false, "Print this help message");
+
+    const char *huid = NULL;
+
+    while (argc > 0) {
+        if (!flag_c_parse(c, argc, argv)) {
+            print_command_usage(self, program_name, c);
+            flag_c_print_error(c, stderr);
+            return false;
+        }
+
+        argc = flag_c_rest_argc(c);
+        argv = flag_c_rest_argv(c);
+
+        if (argc > 0) {
+            if (huid != NULL) {
+                print_command_usage(self, program_name, c);
+                nob_log(ERROR, "Several HUIDs is not supported");
+                return false;
+            }
+
+            huid = shift(argv, argc);
+            if (!is_valid_huid(huid)) {
+                print_command_usage(self, program_name, c);
+                nob_log(ERROR, "`%s` is not a valid HUID. Valid HUID matches regexp %s", huid, HUID_REGEXP_FOR_USER_REPORT_PURPOSES);
+                return false;
+            }
+        }
     }
 
-    const char *huid = shift(argv, argc);
+    if (help) {
+        print_command_usage(self, program_name, c);
+        return true;
+    }
+
+    if (huid == NULL) {
+        print_command_usage(self, program_name, c);
+        nob_log(ERROR, "No HUID was provided");
+        return false;
+    }
 
     const char *dir_path = find_tasks_database();
     if (!dir_path) return false;
@@ -566,12 +540,16 @@ static bool find_run(Command *self, const char *program_name, int argc, char **a
     bool found = false;
     da_foreach(Task, task, &tasks) {
         if (strcmp(task->id, huid) == 0) {
-            print_task(rel_path, task);
+            if (path_only) {
+                printf("%s/%s/TASK.md\n", rel_path, task->id);
+            } else {
+                print_task(rel_path, task);
+            }
             found = true;
         }
     }
     if (!found) {
-        fprintf(stderr, "ERROR: no tasks with HUID %s are found\n", huid);
+        nob_log(ERROR, "No task with with HUID `%s` was found", huid);
         return false;
     }
     return true;
@@ -682,38 +660,33 @@ static bool help_run(Command *self, const char *program_name, int argc, char **a
 static Command commands[] = {
     {
         .name = "ls",
+        .signature = "[OPTIONS]",
         .description = "List the tasks",
         .run = ls_run,
     },
     {
         .name = "new",
+        .signature = "[TITLE...] [OPTIONS]",
         .description = "Create a new task",
         .run = new_run,
     },
     {
-        .name = "fill",
-        .description = "Find all the empty valid task folder and create TASK.md in them",
-        .run = fill_run,
-    },
-    {
         .name = "find",
+        .signature = "<HUID> [OPTIONS]",
         .description = "Find the task with a given HUID",
         .run = find_run,
     },
     {
         .name = "summary",
+        .signature = "[OPTIONS]",
         .description = "Print the summary of the tasks",
         .run = summary_run,
     },
     {
         .name = "help",
+        .signature = "[OPTIONS]",
         .description = "Print this help message",
         .run = help_run,
-    },
-    {
-        .name = "path",
-        .description = "Print path to the task by its HUID",
-        .run = path_run,
     },
 };
 
