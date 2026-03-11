@@ -18,9 +18,9 @@ Something akin to Bex:
 Though, Bex syntax is a bit vebose for this. I should come up with
 something more fitting.
 
-- `#editor` - contains tag `editor`
-- `#editor and #bug` - contains tags `editor` and `bug`
-- `#editor or #bug` - contains tags `editor` or `bug`
+- `.editor` - contains tag `editor`
+- `.editor and .bug` - contains tags `editor` and `bug`
+- `.editor or .bug` - contains tags `editor` or `bug`
 - ..
 
 This kind of style requires thinking about presedence. But maybe it's
