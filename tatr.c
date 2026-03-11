@@ -457,15 +457,21 @@ static bool task_matches_filter(const Task *task, Filter filter, Stack *stack)
 
 static int not_end_of_filter_token(int x)
 {
-    return x != ' ' && x != ')';
+    return x != ' ' && x != ')' && x != '(';
 }
 
-static void report_compile_filter_error(String_View original_src, const String_View *src, const char *message)
+static void report_compile_filter_error(String_View original_src, const String_View *src, const char *format, ...) NOB_PRINTF_FORMAT(3, 4);
+static void report_compile_filter_error(String_View original_src, const String_View *src, const char *format, ...)
 {
     int cursor = src->data - original_src.data + 1;
-    printf(SV_Fmt"\n", SV_Arg(original_src));
-    printf("%*s\n", cursor, "^");
-    printf("ERROR: %s\n", message);
+    fprintf(stderr, SV_Fmt"\n", SV_Arg(original_src));
+    fprintf(stderr, "%*s\n", cursor, "^");
+    fprintf(stderr, "ERROR: ");
+    va_list args;
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    va_end(args);
+    fprintf(stderr, "\n");
 }
 
 static bool compile_filter_expr(String_View original_src, String_View *src, Filter *filter);
@@ -474,7 +480,7 @@ static bool compile_filter_primary(String_View original_src, String_View *src, F
 {
     *src = sv_trim_left(*src);
     if (src->count == 0) {
-        report_compile_filter_error(original_src, src, "unexpected end of filter");
+        report_compile_filter_error(original_src, src, "Expected `.`, `(`, `not`, `any`, or `tagged`.");
         return false;
     }
     if (*src->data == '.') {
@@ -491,7 +497,7 @@ static bool compile_filter_primary(String_View original_src, String_View *src, F
         if (!compile_filter_expr(original_src, src, filter)) return false;
         *src = sv_trim_left(*src);
         if (!sv_starts_with(*src, sv_from_cstr(")"))) {
-            report_compile_filter_error(original_src, src, "expected )");
+            report_compile_filter_error(original_src, src, "Expected `)`.");
             return false;
         }
         sv_chop_left(src, 1);
@@ -513,7 +519,11 @@ static bool compile_filter_primary(String_View original_src, String_View *src, F
         return true;
     }
     *src = saved_src;
-    report_compile_filter_error(original_src, src, temp_sprintf("expected keyword `"SV_Fmt"`", SV_Arg(key)));
+    if (key.count == 0) {
+        report_compile_filter_error(original_src, src, "Expected `.`, `(`, `not`, `any`, or `tagged`.");
+    } else {
+        report_compile_filter_error(original_src, src, "Unknown keyword `"SV_Fmt"`. Expected keywords `not`, `any`, or `tagged`.", SV_Arg(key));
+    }
     return false;
 }
 
@@ -570,7 +580,7 @@ static bool compile_filter(String_View original_src, String_View *src, Filter *f
     if (!compile_filter_expr(original_src, src, filter)) return false;
     *src = sv_trim_left(*src);
     if (src->count != 0) {
-        report_compile_filter_error(original_src, src, "expected end of primary expression");
+        report_compile_filter_error(original_src, src, "Expected keywords `and`, or `or`");
         return false;
     }
     return true;
