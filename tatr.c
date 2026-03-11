@@ -468,7 +468,7 @@ static void report_compile_filter_error(String_View original_src, const String_V
     printf("ERROR: %s\n", message);
 }
 
-static bool compile_filter(String_View original_src, String_View *src, Filter *filter);
+static bool compile_filter_expr(String_View original_src, String_View *src, Filter *filter);
 
 static bool compile_filter_primary(String_View original_src, String_View *src, Filter *filter)
 {
@@ -488,7 +488,7 @@ static bool compile_filter_primary(String_View original_src, String_View *src, F
     }
     if (*src->data == '(') {
         sv_chop_left(src, 1);
-        if (!compile_filter(original_src, src, filter)) return false;
+        if (!compile_filter_expr(original_src, src, filter)) return false;
         *src = sv_trim_left(*src);
         if (!sv_starts_with(*src, sv_from_cstr(")"))) {
             report_compile_filter_error(original_src, src, "expected )");
@@ -559,9 +559,15 @@ static bool compile_filter_or(String_View original_src, String_View *src, Filter
     return true;
 }
 
-static bool compile_filter(String_View original_src, String_View *src, Filter *filter)
+static bool compile_filter_expr(String_View original_src, String_View *src, Filter *filter)
 {
     if (!compile_filter_or(original_src, src, filter)) return false;
+    return true;
+}
+
+static bool compile_filter(String_View original_src, String_View *src, Filter *filter)
+{
+    if (!compile_filter_expr(original_src, src, filter)) return false;
     *src = sv_trim_left(*src);
     if (src->count != 0) {
         report_compile_filter_error(original_src, src, "expected end of primary expression");

@@ -1,6 +1,6 @@
 # Filter "not (tagged or .bug and .test and .foo and .bar)" is not parsed properly
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 100
 - TAGS: bug
 
