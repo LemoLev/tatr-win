@@ -708,7 +708,7 @@ static bool help_run(Command *self, const char *program_name, int argc, char **a
 static Command commands[] = {
     {
         .name = "init",
-        .description = "Current tasks/ directory in the current working directory if it doesn't exist yet",
+        .description = "Create tasks/ directory in the current working directory if it doesn't exist yet",
         .run = init_run,
     },
     {
