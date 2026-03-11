@@ -382,17 +382,207 @@ bool task_matches_tags(const Task *task, const char **tags, size_t tags_count)
     return true;
 }
 
+typedef enum {
+    OP_ANY,
+    OP_TAG,
+    OP_NOT,
+    OP_OR,
+    OP_AND,
+    OP_TAGGED,
+} Op_Kind;
+
+typedef struct {
+    Op_Kind kind;
+    String_View tag;
+} Op;
+
+void print_op(Op op)
+{
+    switch (op.kind) {
+    case OP_ANY:      printf("OP_ANY\n");                          break;
+    case OP_TAG:      printf("OP_TAG "SV_Fmt"\n", SV_Arg(op.tag)); break;
+    case OP_NOT:      printf("OP_NOT\n");                          break;
+    case OP_OR:       printf("OP_OR\n");                           break;
+    case OP_AND:      printf("OP_AND\n");                          break;
+    case OP_TAGGED:   printf("OP_TAGGED\n");                       break;
+    default: UNREACHABLE("Op_Kind");
+    }
+}
+
+typedef struct {
+    Op *items;
+    size_t count;
+    size_t capacity;
+} Filter;
+
+typedef struct {
+    bool *items;
+    size_t count;
+    size_t capacity;
+} Stack;
+
+static bool task_matches_filter(const Task *task, Filter filter, Stack *stack)
+{
+    stack->count = 0;
+    da_foreach(Op, op, &filter) {
+        switch (op->kind) {
+        case OP_ANY: {
+            da_append(stack, true);
+        } break;
+        case OP_TAG: {
+            bool result = tags_contains(task->tags, op->tag);
+            da_append(stack, result);
+        } break;
+        case OP_NOT: {
+            da_last(stack) = !da_last(stack);
+        } break;
+        case OP_OR: {
+            bool a = da_pop(stack);
+            bool b = da_pop(stack);
+            da_append(stack, a || b);
+        } break;
+        case OP_AND: {
+            bool a = da_pop(stack);
+            bool b = da_pop(stack);
+            da_append(stack, a && b);
+        } break;
+        case OP_TAGGED: {
+            da_append(stack, task->tags.count > 0);
+        } break;
+        default: UNREACHABLE("Op_Kind");
+        }
+    }
+    return da_first(stack);
+}
+
+static int not_end_of_filter_token(int x)
+{
+    return x != ' ' && x != ')';
+}
+
+static void report_compile_filter_error(String_View original_src, const String_View *src, const char *message)
+{
+    int cursor = src->data - original_src.data + 1;
+    printf(SV_Fmt"\n", SV_Arg(original_src));
+    printf("%*s\n", cursor, "^");
+    printf("ERROR: %s\n", message);
+}
+
+static bool compile_filter(String_View original_src, String_View *src, Filter *filter);
+
+static bool compile_filter_primary(String_View original_src, String_View *src, Filter *filter)
+{
+    *src = sv_trim_left(*src);
+    if (src->count == 0) {
+        report_compile_filter_error(original_src, src, "unexpected end of filter");
+        return false;
+    }
+    if (*src->data == '.') {
+        sv_chop_left(src, 1);
+        String_View tag = sv_chop_while(src, not_end_of_filter_token);
+        da_append(filter, ((Op) {
+            .kind = OP_TAG,
+            .tag = tag,
+        }));
+        return true;
+    }
+    if (*src->data == '(') {
+        sv_chop_left(src, 1);
+        if (!compile_filter(original_src, src, filter)) return false;
+        *src = sv_trim_left(*src);
+        if (!sv_starts_with(*src, sv_from_cstr(")"))) {
+            report_compile_filter_error(original_src, src, "expected )");
+            return false;
+        }
+        sv_chop_left(src, 1);
+        return true;
+    }
+    String_View saved_src = *src;
+    String_View key = sv_chop_while(src, not_end_of_filter_token);
+    if (sv_eq(key, sv_from_cstr("not"))) {
+        if (!compile_filter_primary(original_src, src, filter)) return false;
+        da_append(filter, ((Op) { .kind = OP_NOT }));
+        return true;
+    }
+    if (sv_eq(key, sv_from_cstr("any"))) {
+        da_append(filter, ((Op) { .kind = OP_ANY }));
+        return true;
+    }
+    if (sv_eq(key, sv_from_cstr("tagged"))) {
+        da_append(filter, ((Op) { .kind = OP_TAGGED }));
+        return true;
+    }
+    *src = saved_src;
+    report_compile_filter_error(original_src, src, temp_sprintf("expected keyword `"SV_Fmt"`", SV_Arg(key)));
+    return false;
+}
+
+static bool compile_filter_and(String_View original_src, String_View *src, Filter *filter)
+{
+    // <expr> [and <expr>]*
+    if (!compile_filter_primary(original_src, src, filter)) return false;
+    for (;;) {
+        *src = sv_trim_left(*src);
+        if (src->count == 0) {
+            return true;
+        }
+        String_View saved_src = *src;
+        String_View key = sv_chop_while(src, not_end_of_filter_token);
+        if (!sv_eq(key, sv_from_cstr("and"))) {
+            *src = saved_src;
+            return true;
+        }
+        if (!compile_filter_primary(original_src, src, filter)) return false;
+        da_append(filter, ((Op) {.kind = OP_AND}));
+    }
+    return true;
+}
+
+static bool compile_filter_or(String_View original_src, String_View *src, Filter *filter)
+{
+    // <expr> [or <expr>]*
+    if (!compile_filter_and(original_src, src, filter)) return false;
+    for (;;) {
+        *src = sv_trim_left(*src);
+        if (src->count == 0) {
+            return true;
+        }
+        String_View saved_src = *src;
+        String_View key = sv_chop_while(src, not_end_of_filter_token);
+        if (!sv_eq(key, sv_from_cstr("or"))) {
+            *src = saved_src;
+            return true;
+        }
+        if (!compile_filter_and(original_src, src, filter)) return false;
+        da_append(filter, ((Op) {.kind = OP_OR}));
+    }
+    return true;
+}
+
+static bool compile_filter(String_View original_src, String_View *src, Filter *filter)
+{
+    if (!compile_filter_or(original_src, src, filter)) return false;
+    *src = sv_trim_left(*src);
+    if (src->count != 0) {
+        report_compile_filter_error(original_src, src, "expected end of primary expression");
+        return false;
+    }
+    return true;
+}
+
 static bool ls_run(Command *self, const char *program_name, int argc, char **argv)
 {
-    Flag_List tags = {0};
     bool closed = false;
     bool ascending = false;
     bool help = false;
+    bool debug_filter = false;
+    char *filter_src = NULL;
 
     void *c = flag_c_new(program_name);
     flag_c_bool_var(c, &closed, "c", false, "List closed tasks");
     flag_c_bool_var(c, &ascending, "a", false, "List tasks in ascending order");
-    flag_c_list_var(c, &tags, "t", "Show only tasks with these tags");
+    flag_c_str_var(c, &filter_src, "f", "any", "A filter to filter the tasks by");
+    flag_c_bool_var(c, &debug_filter, "df", false, "Output opcodes of the filter for debug purpose");
     flag_c_bool_var(c, &help, "help", false, "Print this help message");
 
     if (!flag_c_parse(c, argc, argv)) {
@@ -403,6 +593,18 @@ static bool ls_run(Command *self, const char *program_name, int argc, char **arg
 
     if (help) {
         print_command_usage(self, program_name, c);
+        return true;
+    }
+
+    Filter filter = {0};
+    String_View original_src = sv_from_cstr(filter_src);
+    String_View src          = sv_from_cstr(filter_src);
+    if (!compile_filter(original_src, &src, &filter)) return false;
+
+    if (debug_filter) {
+        da_foreach(Op, op, &filter) {
+            print_op(*op);
+        }
         return true;
     }
 
@@ -422,10 +624,12 @@ static bool ls_run(Command *self, const char *program_name, int argc, char **arg
         qsort(tasks.items, tasks.count, sizeof(*tasks.items), task_compare_priority_reverse);
     }
 
+    Stack stack = {0};
+
     size_t tasks_matched = 0;
     da_foreach(Task, task, &tasks) {
         if (strcmp(task->status, closed ? "CLOSED" : "OPEN") != 0) continue;
-        if (!task_matches_tags(task, tags.items, tags.count)) continue;
+        if (!task_matches_filter(task, filter, &stack)) continue;
         print_task(rel_path, task);
         tasks_matched += 1;
     }

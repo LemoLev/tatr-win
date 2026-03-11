@@ -10,10 +10,12 @@ int main(int argc, char **argv)
 
     if (!mkdir_if_not_exists(BUILD_FOLDER)) return 1;
 
-    cmd_append(&cmd, "cc");
+    cmd_append(&cmd, "clang");
     cmd_append(&cmd, "-Wall");
     cmd_append(&cmd, "-Wextra");
+    cmd_append(&cmd, "-Wswitch-enum");
     cmd_append(&cmd, "-Wno-unused-function");
+    cmd_append(&cmd, "-fsanitize=undefined,memory");
     cmd_append(&cmd, "-pedantic");
     cmd_append(&cmd, "-ggdb");
     cmd_append(&cmd, "-o", BUILD_FOLDER"tatr");

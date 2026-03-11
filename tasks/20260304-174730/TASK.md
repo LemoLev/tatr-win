@@ -1,6 +1,6 @@
 # An ability to exclude tags from `ls` output
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 90
 
 ```console
@@ -14,4 +14,4 @@ programming language.
 
 ---
 
-Might be superseded by 20260310-133453
+Superseded by 20260310-133453

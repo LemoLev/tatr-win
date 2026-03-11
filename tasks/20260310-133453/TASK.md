@@ -1,6 +1,6 @@
 # Query language for `tatr ls`
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 100
 - TAGS: stream
 
@@ -25,3 +25,7 @@ something more fitting.
 
 This kind of style requires thinking about presedence. But maybe it's
 worth it.
+
+---
+
+Done!
