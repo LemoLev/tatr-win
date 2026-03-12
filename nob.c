@@ -1,26 +1,48 @@
 #define NOB_IMPLEMENTATION
+#define NOB_WARN_DEPRECATED
 #include "./thirdparty/nob.h"
+#define FLAG_IMPLEMENTATION
+#include "./thirdparty/flag.h"
 
 #define BUILD_FOLDER "build/"
 
-bool run_filter_payload(Cmd *cmd, String_Builder *sb, const char *filter_payload)
+typedef struct {
+    Cmd cmd;
+    String_Builder sb_stdout;
+    String_Builder sb_stderr;
+    bool tatr_ls_ok;
+} Test_Runner;
+
+bool run_filter_payload(Test_Runner *r, const char *filter_payload)
 {
     const char *test_stdout_path = BUILD_FOLDER"test_stdout.txt";
-    cmd_append(cmd, BUILD_FOLDER"tatr");
-    cmd_append(cmd, "ls");
-    cmd_append(cmd, "-df");
-    cmd_append(cmd, "-f");
-    cmd_append(cmd, filter_payload);
-    if (!cmd_run(cmd, .stdout_path = test_stdout_path)) return false;
-    sb->count = 0;
-    if (!read_entire_file(test_stdout_path, sb)) return false;
+    const char *test_stderr_path = BUILD_FOLDER"test_stderr.txt";
+    cmd_append(&r->cmd, BUILD_FOLDER"tatr");
+    cmd_append(&r->cmd, "ls");
+    cmd_append(&r->cmd, "-df");
+    cmd_append(&r->cmd, "-f");
+    cmd_append(&r->cmd, filter_payload);
+    Log_Handler *saved_log_handler = get_log_handler();
+    set_log_handler(null_log_handler);
+    {
+        r->tatr_ls_ok = cmd_run(
+            &r->cmd,
+            .stdout_path = test_stdout_path,
+            .stderr_path = test_stderr_path
+        );
+    }
+    set_log_handler(saved_log_handler);
+    r->sb_stdout.count = 0;
+    if (!read_entire_file(test_stdout_path, &r->sb_stdout)) return false;
+    r->sb_stderr.count = 0;
+    if (!read_entire_file(test_stderr_path, &r->sb_stderr)) return false;
     return true;
 }
 
-bool assert_test_output(String_View expected_stdout, String_View actual_stdout)
+bool assert_test_output(const char *output_label, String_View expected_stdout, String_View actual_stdout)
 {
     if (!sv_eq(expected_stdout, actual_stdout)) {
-        nob_log(ERROR, "UNEXPECTED STDOUT!!!");
+        nob_log(ERROR, "UNEXPECTED %s !!!", output_label);
         nob_log(ERROR, "EXPECTED:");
         fprintf(stderr, SV_Fmt"\n", SV_Arg(expected_stdout));
         nob_log(ERROR, "ACTUAL:");
@@ -30,11 +52,16 @@ bool assert_test_output(String_View expected_stdout, String_View actual_stdout)
     return true;
 }
 
-bool test_ls_filter_negation_of_complex_expression_in_parens(Cmd *cmd, String_Builder *sb)
+bool test_ls_filter_negation_of_complex_expression_in_parens(Test_Runner *r)
 {
     nob_log(INFO, "Running %s...", __func__);
-    if (!run_filter_payload(cmd, sb, "not (tagged or .bug and .test and .foo and .bar)")) return 1;
+    if (!run_filter_payload(r, "not (tagged or .bug and .test and .foo and .bar)")) return 1;
+    if (!r->tatr_ls_ok) {
+        nob_log(ERROR, "Command failed, but should've suceeded");
+        return false;
+    }
     if (!assert_test_output(
+        "STDOUT",
         sv_from_cstr(
             "OP_TAGGED\n"
             "OP_TAG bug\n"
@@ -46,16 +73,22 @@ bool test_ls_filter_negation_of_complex_expression_in_parens(Cmd *cmd, String_Bu
             "OP_AND\n"
             "OP_OR\n"
             "OP_NOT\n"),
-        sb_to_sv(*sb))) return false;
+        sb_to_sv(r->sb_stdout))) return false;
+    if (!assert_test_output("STDERR", (String_View){0}, sb_to_sv(r->sb_stderr))) return false;
     nob_log(INFO, "OK");
     return true;
 }
 
-bool test_ls_filter_not_stuck_to_open_paren(Cmd *cmd, String_Builder *sb)
+bool test_ls_filter_not_stuck_to_open_paren(Test_Runner *r)
 {
     nob_log(INFO, "Running %s...", __func__);
-    if (!run_filter_payload(cmd, sb, "not(.bug and .test) and .filter")) return false;
+    if (!run_filter_payload(r, "not(.bug and .test) and .filter")) return false;
+    if (!r->tatr_ls_ok) {
+        nob_log(ERROR, "Command failed, but should've suceeded");
+        return false;
+    }
     if (!assert_test_output(
+        "STDOUT",
         sv_from_cstr(
             "OP_TAG bug\n"
             "OP_TAG test\n"
@@ -63,7 +96,28 @@ bool test_ls_filter_not_stuck_to_open_paren(Cmd *cmd, String_Builder *sb)
             "OP_NOT\n"
             "OP_TAG filter\n"
             "OP_AND\n"),
-        sb_to_sv(*sb))) return false;
+        sb_to_sv(r->sb_stdout))) return false;
+    if (!assert_test_output("STDERR", (String_View){0}, sb_to_sv(r->sb_stderr))) return false;
+    nob_log(INFO, "OK");
+    return true;
+}
+
+bool test_ls_filter_report_error_utf8(Test_Runner *r)
+{
+    nob_log(INFO, "Running %s...", __func__);
+    if (!run_filter_payload(r, ".привет hello")) return false;
+    if (r->tatr_ls_ok) {
+        nob_log(ERROR, "Command succeeded, but should've failed");
+        return false;
+    }
+    if (!assert_test_output("STDOUT", (String_View){0}, sb_to_sv(r->sb_stdout))) return false;
+    if (!assert_test_output(
+        "STDERR",
+        sv_from_cstr(
+            ".привет hello\n"
+            "        ^\n"
+            "ERROR: Expected keywords `and`, or `or`\n"),
+        sb_to_sv(r->sb_stderr))) return false;
     nob_log(INFO, "OK");
     return true;
 }
@@ -72,7 +126,29 @@ int main(int argc, char **argv)
 {
     GO_REBUILD_URSELF(argc, argv);
     Cmd cmd = {0};
-    String_Builder sb = {0};
+
+    bool no_test = false;
+    bool run = false;
+    bool help = false;
+    flag_bool_var(&no_test, "no-test", false, "Do not run tests after building");
+    flag_bool_var(&run, "run", false, "Run the app after the build");
+    flag_bool_var(&help, "help", false, "Print this help message");
+
+    if (!flag_parse(argc, argv)) {
+        fprintf(stderr, "Usage: %s [OPTIONS]\n", flag_program_name());
+        flag_print_options(stderr);
+        flag_print_error(stderr);
+        return 1;
+    }
+
+    argc = flag_rest_argc();
+    argv = flag_rest_argv();
+
+    if (help) {
+        fprintf(stderr, "Usage: %s [OPTIONS]\n", flag_program_name());
+        flag_print_options(stderr);
+        return 0;
+    }
 
     if (!mkdir_if_not_exists(BUILD_FOLDER)) return 1;
 
@@ -88,8 +164,18 @@ int main(int argc, char **argv)
     cmd_append(&cmd, "tatr.c");
     if (!cmd_run(&cmd)) return 1;
 
-    if (!test_ls_filter_negation_of_complex_expression_in_parens(&cmd, &sb)) return 1;
-    if (!test_ls_filter_not_stuck_to_open_paren(&cmd, &sb)) return 1;
+    if (!no_test) {
+        Test_Runner r = {0};
+        if (!test_ls_filter_negation_of_complex_expression_in_parens(&r)) return 1;
+        if (!test_ls_filter_not_stuck_to_open_paren(&r)) return 1;
+        if (!test_ls_filter_report_error_utf8(&r)) return 1;
+    }
+
+    if (run) {
+        cmd_append(&cmd, BUILD_FOLDER"tatr");
+        da_append_many(&cmd, argv, argc);
+        if (!cmd_run(&cmd)) return false;
+    }
 
     return 0;
 }

@@ -1,6 +1,6 @@
 # `tatr ls` filter language does not work well with UTF-8
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 100
 
 We need to test that at least.

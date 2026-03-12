@@ -10,6 +10,33 @@
 #define DEFAULT_TASK_TITLE "New Task"
 #define DEFAULT_PRIORITY 100
 
+// Stolen from Jai's Unicode module
+static uint8_t bytes_for_utf8[] = {
+    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+    2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
+    3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3, 4,4,4,4,4,4,4,4,5,5,5,5,6,6,6,6,
+};
+
+static inline size_t sv_utf8_len(String_View sv, size_t *bytes_overrun)
+{
+    size_t i = 0;
+    size_t n = 0;
+    while (true) {
+        if (i >= sv.count) {
+            if (bytes_overrun) *bytes_overrun = i - sv.count;
+            return n;
+        }
+        i += bytes_for_utf8[(uint8_t)sv.data[i]];
+        n += 1;
+    }
+    UNREACHABLE("sv_utf8_len");
+}
+
 #define HUID_REGEXP_FOR_USER_REPORT_PURPOSES "/[0-9]{8}-[0-9]{6}/"
 static inline bool is_valid_huid(const char *id)
 {
@@ -463,7 +490,10 @@ static int not_end_of_filter_token(int x)
 static void report_compile_filter_error(String_View original_src, const String_View *src, const char *format, ...) NOB_PRINTF_FORMAT(3, 4);
 static void report_compile_filter_error(String_View original_src, const String_View *src, const char *format, ...)
 {
-    int cursor = src->data - original_src.data + 1;
+    int cursor = sv_utf8_len((String_View) {
+        .data = original_src.data,
+        .count = src->data - original_src.data,
+    }, NULL) + 1;
     fprintf(stderr, SV_Fmt"\n", SV_Arg(original_src));
     fprintf(stderr, "%*s\n", cursor, "^");
     fprintf(stderr, "ERROR: ");
