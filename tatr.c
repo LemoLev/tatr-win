@@ -621,20 +621,29 @@ static bool ls_run(Command *self, const char *program_name, int argc, char **arg
     bool closed = false;
     bool ascending = false;
     bool help = false;
-    bool debug_filter = false;
-    char *filter_src = NULL;
+    bool debug = false;
+    String_Builder filter_src = {0};
 
     void *c = flag_c_new(program_name);
     flag_c_bool_var(c, &closed, "c", false, "List closed tasks");
     flag_c_bool_var(c, &ascending, "a", false, "List tasks in ascending order");
-    flag_c_str_var(c, &filter_src, "f", "any", "A filter to filter the tasks by");
-    flag_c_bool_var(c, &debug_filter, "df", false, "Output opcodes of the filter for debug purpose");
+    flag_c_bool_var(c, &debug, "debug", false, "Output opcodes of the filter for debug purpose");
     flag_c_bool_var(c, &help, "help", false, "Print this help message");
 
-    if (!flag_c_parse(c, argc, argv)) {
-        print_command_usage(self, program_name, c);
-        flag_c_print_error(c, stderr);
-        return false;
+    while (argc > 0) {
+        if (!flag_c_parse(c, argc, argv)) {
+            print_command_usage(self, program_name, c);
+            flag_c_print_error(c, stderr);
+            return false;
+        }
+
+        argc = flag_c_rest_argc(c);
+        argv = flag_c_rest_argv(c);
+
+        if (argc > 0) {
+            if (filter_src.count > 0) sb_append(&filter_src, ' ');
+            sb_append_cstr(&filter_src, shift(argv, argc));
+        }
     }
 
     if (help) {
@@ -642,12 +651,13 @@ static bool ls_run(Command *self, const char *program_name, int argc, char **arg
         return true;
     }
 
+    String_View src = sv_trim(sb_to_sv(filter_src));
+    if (src.count == 0) src = sv_from_cstr("any");
+    String_View original_src = src;
     Filter filter = {0};
-    String_View original_src = sv_from_cstr(filter_src);
-    String_View src          = sv_from_cstr(filter_src);
     if (!compile_filter(original_src, &src, &filter)) return false;
 
-    if (debug_filter) {
+    if (debug) {
         da_foreach(Op, op, &filter) {
             print_op(*op);
         }

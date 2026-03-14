@@ -19,8 +19,7 @@ bool run_filter_payload(Test_Runner *r, const char *filter_payload)
     const char *test_stderr_path = BUILD_FOLDER"test_stderr.txt";
     cmd_append(&r->cmd, BUILD_FOLDER"tatr");
     cmd_append(&r->cmd, "ls");
-    cmd_append(&r->cmd, "-df");
-    cmd_append(&r->cmd, "-f");
+    cmd_append(&r->cmd, "-debug");
     cmd_append(&r->cmd, filter_payload);
     Log_Handler *saved_log_handler = get_log_handler();
     set_log_handler(null_log_handler);
@@ -57,7 +56,7 @@ bool test_ls_filter_negation_of_complex_expression_in_parens(Test_Runner *r)
     nob_log(INFO, "Running %s...", __func__);
     if (!run_filter_payload(r, "not (tagged or .bug and .test and .foo and .bar)")) return 1;
     if (!r->tatr_ls_ok) {
-        nob_log(ERROR, "Command failed, but should've suceeded");
+        fprintf(stderr, "%s:%d: ERROR: Command failed, but should've suceeded\n", __FILE__, __LINE__);
         return false;
     }
     if (!assert_test_output(
