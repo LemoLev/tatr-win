@@ -859,14 +859,17 @@ static bool find_run(Command *self, const char *program_name, int argc, char **a
     return true;
 }
 
-uint32_t sv_key_hash(const String_View *a)
+uint32_t sv_key_hash(void const* a)
 {
-    return ht_djb2(a->data, a->count);
+    String_View const* a_typed = a;
+    return ht_djb2(a_typed->data, a_typed->count);
 }
 
-bool sv_key_eq(const String_View *a, const String_View *b)
+bool sv_key_eq(void const* a, void const* b)
 {
-    return sv_eq(*a, *b);
+    String_View const* a_typed = a;
+    String_View const* b_typed = b;
+    return sv_eq(*a_typed, *b_typed);
 }
 
 typedef struct {
