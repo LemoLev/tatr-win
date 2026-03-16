@@ -5,6 +5,8 @@
 #define FLAG_PUSH_DASH_DASH_BACK
 #include "./thirdparty/flag.h"
 #define HT_IMPLEMENTATION
+#define ht_user_key_hash(key) _Generic(key, String_View: sv_key_hash, default: NULL)
+#define ht_user_key_eq(key)   _Generic(key, String_View: sv_key_eq,   default: NULL)
 #include "./thirdparty/ht.h"
 
 #define DEFAULT_TASK_TITLE "New Task"
@@ -911,10 +913,7 @@ static bool summary_run(Command *self, const char *program_name, int argc, char 
     if (!load_tasks(&tasks, dir_path)) return false;
     size_t total_count = 0;
     size_t untagged_count = 0;
-    Hash_Table(String_View, size_t) tags_count = {
-        .key_hash = sv_key_hash,
-        .key_eq   = sv_key_eq,
-    };
+    Hash_Table(String_View, size_t) tags_count = {0};
     for (size_t i = 0; i < tasks.count; ++i) {
         Task *task = &tasks.items[i];
         bool task_is_closed = strcmp(task->status, "CLOSED") == 0;

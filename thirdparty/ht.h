@@ -27,8 +27,6 @@ typedef enum {
         size_t    count;        \
         size_t    filled_slots; \
         size_t    capacity;     \
-        Key_Hash  key_hash;     \
-        Key_Eq    key_eq;       \
     }
 
 typedef uint32_t (*Key_Hash)(void const *key);
@@ -159,24 +157,28 @@ static void ht__delete(void *ht_values, size_t ht_value_size,
                        Ht_Slot *ht_slots,
                        size_t ht_capacity, size_t *ht_count,
                        void *value);
-#define ht__default_key_hash(ht)                  \
-    ((ht)->key_hash ?                             \
-     (ht)->key_hash :                             \
-     _Generic(*(ht)->keys,                        \
-         char*:                ht_cstr_hash_djb2, \
-         const char*:          ht_cstr_hash_djb2, \
-         unsigned char*:       ht_cstr_hash_djb2, \
-         const unsigned char*: ht_cstr_hash_djb2, \
-         default:              (ht)->key_hash))
-#define ht__default_key_eq(ht)             \
-    ((ht)->key_eq ?                        \
-     (ht)->key_eq :                        \
-     _Generic(*(ht)->keys,                 \
-         char*:                ht_cstr_eq, \
-         const char*:          ht_cstr_eq, \
-         unsigned char*:       ht_cstr_eq, \
-         const unsigned char*: ht_cstr_eq, \
-         default:              (ht)->key_eq))
+
+#ifndef ht_user_key_hash
+#define ht_user_key_hash(...) NULL
+#endif  // ht_user_key_hash
+#define ht__default_key_hash(ht)                      \
+    _Generic(*(ht)->keys,                             \
+             char*:                ht_cstr_hash_djb2, \
+             const char*:          ht_cstr_hash_djb2, \
+             unsigned char*:       ht_cstr_hash_djb2, \
+             const unsigned char*: ht_cstr_hash_djb2, \
+             default:              ht_user_key_hash(*(ht)->keys))
+
+#ifndef ht_user_key_eq
+#define ht_user_key_eq(...) NULL
+#endif  // ht_user_key_eq
+#define ht__default_key_eq(ht)                 \
+    _Generic(*(ht)->keys,                      \
+             char*:                ht_cstr_eq, \
+             const char*:          ht_cstr_eq, \
+             unsigned char*:       ht_cstr_eq, \
+             const unsigned char*: ht_cstr_eq, \
+             default:              ht_user_key_eq(*(ht)->keys))
 
 #endif // HT_H_
 
