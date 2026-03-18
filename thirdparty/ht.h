@@ -7,152 +7,215 @@
 #include <stdbool.h>
 #include <string.h>
 
-#define Hash_Table(Key, Value)  \
-    struct {                    \
-        Key       key_;         \
-        Value    *value_;       \
-        Key       temp_key;     \
-        Value    *temp_value;   \
-        Key      *keys;         \
-        Value    *values;       \
-        uint32_t *hashes;       \
-        Ht_Slot  *slots;        \
-        size_t    count;        \
-        size_t    filled_slots; \
-        size_t    capacity;     \
-        Key_Hash  key_hash;     \
-        Key_Eq    key_eq;       \
+// The Hash Table.
+//
+// You can define it like this:
+// ```c
+// Hash_Table(int, int) ht = {0}; // Zero initialized Hash Table is a valid Hash Table!
+// ```
+//
+// You should probably typedef it if you need to pass it multiple places. Because anonymous structs
+// are not particularly compatible with each other even if the have literally the same definition:
+//
+// ```c
+// typedef Hash_Table(const char*, int) Word_Count;
+//
+// void count_words(Word_Count *wc, const char *text);
+// ```
+#define Hash_Table(Key, Value)                                 \
+    struct {                                                   \
+        /* Amount of items in the Hash Table */                \
+        size_t    count;                                       \
+        /* Key hashing function.                               \
+         * NULL means a default hashing function will be used. \
+         */                                                    \
+        Key_Hash  key_hash;                                    \
+        /* Key equality function.                              \
+         * NULL means the key will be compared by bytes.       \
+         */                                                    \
+        Key_Eq    key_eq;                                      \
+        /* This fields are subject to change. */               \
+        struct {                                               \
+            Key       temp_key;                                \
+            Value    *temp_value;                              \
+            Key      *keys;                                    \
+            Value    *values;                                  \
+            uint32_t *hashes;                                  \
+            Ht_Slot  *slots;                                   \
+            size_t    filled_slots;                            \
+            size_t    capacity;                                \
+        } impl;                                                \
     }
 
-// Value *ht_find(Hash_Table(Key, Value) *ht, Key key)
+// Usually the Hash Table will work fine with the majority of the Key types. By default it compares and
+// hashes the keys by their byte representation. For the C stringy types:
+// - const char *
+// - char *
+// - const unsigned char *
+// - unsigned char *
+// it makes an exception and treats them as NULL-terminated strings.
 //
-// Tries to find a value by they key. If found returns the pointer to the value,
-// otherwise returns NULL.
-#define ht_find(ht, key_)                                                                          \
-    ((ht)->temp_key = (key_),                                                                      \
-     (ht)->temp_value =                                                                            \
-         ht__decltype_cast((ht)->value) ht__find((ht)->keys, sizeof(*(ht)->keys),                  \
-                                                 ht__default_key_hash(ht), ht__default_key_eq(ht), \
-                                                 (ht)->values, sizeof(*(ht)->values),              \
-                                                 (ht)->slots, (ht)->hashes,                        \
-                                                 (ht)->capacity,                                   \
-                                                 &(ht)->temp_key))
-
-// Value *ht_find_or_put(Hash_Table(Key, Value) *ht, Key key)
+// This works for like 90% of the cases. If you need to treat your keys in a different way, create
+// custom Key_Hash and Key_Eq functions and put them into .key_hash and .key_eq fields of the Hash_Table
 //
-// Tries to find a value by the key, if not found inserts the key with the value implicitly zero-initialized.
-// Never fails. Always returns either the pointer to the found value or the newly added value.
-#define ht_find_or_put(ht, key_)                                                                                 \
-    ((ht)->temp_key = (key_),                                                                                    \
-     (ht)->temp_value =                                                                                          \
-         ht__decltype_cast((ht)->value) ht__find((ht)->keys, sizeof(*(ht)->keys),                                \
-                                                 ht__default_key_hash(ht), ht__default_key_eq(ht),               \
-                                                 (ht)->values, sizeof(*(ht)->values),                            \
-                                                 (ht)->slots, (ht)->hashes,                                      \
-                                                 (ht)->capacity,                                                 \
-                                                 &(ht)->temp_key),                                               \
-     (ht)->temp_value ? (ht)->temp_value : (                                                                     \
-         ht__expand((void**)&(ht)->keys, sizeof(*(ht)->keys),                                                    \
-                    ht__default_key_hash(ht), ht__default_key_eq(ht),                                            \
-                    (void**)&(ht)->values, sizeof(*(ht)->values),                                                \
-                    &(ht)->slots, &(ht)->hashes,                                                                 \
-                    &(ht)->capacity, &(ht)->filled_slots, &(ht)->count),                                         \
-         (ht)->temp_value =                                                                                      \
-             ht__decltype_cast((ht)->value) ht__put_no_expand((ht)->keys, sizeof(*(ht)->keys),                   \
-                                                              ht__default_key_hash(ht), ht__default_key_eq(ht),  \
-                                                              (ht)->values, sizeof(*(ht)->values),               \
-                                                              (ht)->slots, (ht)->hashes,                         \
-                                                              (ht)->capacity, &(ht)->filled_slots, &(ht)->count, \
-                                                              &(ht)->temp_key)))
+// ```c
+// typedef struct {
+//     const char *data;
+//     int count;
+// } String_View;
+//
+// uint32_t sv_key_hash(void const* a);
+// bool sv_key_eq(void const* a, void const* b);
+//
+// Hash_Table(String_View, int) ht = {
+//     .key_hash = sv_key_hash,
+//     .key_eq   = sv_key_eq,
+// };
+//
+// uint32_t sv_key_hash(void const* key)
+// {
+//     String_View const* key_typed = key;
+//     return ht_djb2(key_typed->data, key_typed->count);
+// }
+//
+// bool sv_key_eq(void const* a, void const* b)
+// {
+//     String_View const* a_typed = a;
+//     String_View const* b_typed = b;
+//     if (a_typed->count != b_typed->count) return false;
+//     return memcmp(a_typed->data, b_typed->data, a_typed->count) == 0;
+// }
+// ```
+typedef uint32_t (*Key_Hash)(void const *key);
+typedef bool (*Key_Eq)(void const *a, void const *b);
 
 // Value *ht_put(Hash_Table(Key, Value) *ht, Key key)
 //
 // Puts a the key with the value zero-initialized.
 // Returns the pointer to the inserted value.
-#define ht_put(ht, key_)                                                                                     \
-    ((ht)->temp_key = (key_),                                                                                \
-     ht__expand((void**)&(ht)->keys, sizeof(*(ht)->keys),                                                    \
-                ht__default_key_hash(ht), ht__default_key_eq(ht),                                            \
-                (void**)&(ht)->values, sizeof(*(ht)->values),                                                \
-                &(ht)->slots, &(ht)->hashes,                                                                 \
-                &(ht)->capacity, &(ht)->filled_slots, &(ht)->count),                                         \
-     (ht)->temp_value =                                                                                      \
-         ht__decltype_cast((ht)->value) ht__put_no_expand((ht)->keys, sizeof(*(ht)->keys),                   \
-                                                          ht__default_key_hash(ht), ht__default_key_eq(ht),  \
-                                                          (ht)->values, sizeof(*(ht)->values),               \
-                                                          (ht)->slots, (ht)->hashes,                         \
-                                                          (ht)->capacity, &(ht)->filled_slots, &(ht)->count, \
-                                                          &(ht)->temp_key))
+#define ht_put(ht, key)                                                                 \
+    ((ht)->impl.temp_key = (key),                                                       \
+     ht__expand((void**)&(ht)->impl.keys, sizeof(*(ht)->impl.keys),                     \
+                ht__default_key_hash(ht), ht__default_key_eq(ht),                       \
+                (void**)&(ht)->impl.values, sizeof(*(ht)->impl.values),                 \
+                &(ht)->impl.slots, &(ht)->impl.hashes,                                  \
+                &(ht)->impl.capacity, &(ht)->impl.filled_slots, &(ht)->count),          \
+     (ht)->impl.temp_value =                                                            \
+         ht__decltype_cast((ht)->impl.temp_value)                                       \
+         ht__put_no_expand((ht)->impl.keys, sizeof(*(ht)->impl.keys),                   \
+                           ht__default_key_hash(ht), ht__default_key_eq(ht),            \
+                           (ht)->impl.values, sizeof(*(ht)->impl.values),               \
+                           (ht)->impl.slots, (ht)->impl.hashes,                         \
+                           (ht)->impl.capacity, &(ht)->impl.filled_slots, &(ht)->count, \
+                           &(ht)->impl.temp_key))
+
+// Value *ht_find(Hash_Table(Key, Value) *ht, Key key)
+//
+// Tries to find a value by they key. If found returns the pointer to the value,
+// otherwise returns NULL.
+#define ht_find(ht, key)                                            \
+    ((ht)->impl.temp_key = (key),                                   \
+     (ht)->impl.temp_value =                                        \
+         ht__decltype_cast((ht)->impl.temp_value)                   \
+         ht__find((ht)->impl.keys, sizeof(*(ht)->impl.keys),        \
+                  ht__default_key_hash(ht), ht__default_key_eq(ht), \
+                  (ht)->impl.values, sizeof(*(ht)->impl.values),    \
+                  (ht)->impl.slots, (ht)->impl.hashes,              \
+                  (ht)->impl.capacity,                              \
+                  &(ht)->impl.temp_key))
+
+// Value *ht_find_or_put(Hash_Table(Key, Value) *ht, Key key)
+//
+// Tries to find a value by the key, if not found inserts the key with the value implicitly zero-initialized.
+// Never fails. Always returns either the pointer to the found value or the newly added value.
+#define ht_find_or_put(ht, key)                                                             \
+    ((ht)->impl.temp_key = (key),                                                           \
+     (ht)->impl.temp_value =                                                                \
+         ht__decltype_cast((ht)->impl.temp_value)                                           \
+         ht__find((ht)->impl.keys, sizeof(*(ht)->impl.keys),                                \
+                  ht__default_key_hash(ht), ht__default_key_eq(ht),                         \
+                  (ht)->impl.values, sizeof(*(ht)->impl.values),                            \
+                  (ht)->impl.slots, (ht)->impl.hashes,                                      \
+                  (ht)->impl.capacity,                                                      \
+                  &(ht)->impl.temp_key),                                                    \
+     (ht)->impl.temp_value ? (ht)->impl.temp_value : (                                      \
+         ht__expand((void**)&(ht)->impl.keys, sizeof(*(ht)->impl.keys),                     \
+                    ht__default_key_hash(ht), ht__default_key_eq(ht),                       \
+                    (void**)&(ht)->impl.values, sizeof(*(ht)->impl.values),                 \
+                    &(ht)->impl.slots, &(ht)->impl.hashes,                                  \
+                    &(ht)->impl.capacity, &(ht)->impl.filled_slots, &(ht)->count),          \
+         (ht)->impl.temp_value =                                                            \
+             ht__decltype_cast((ht)->impl.temp_value)                                       \
+             ht__put_no_expand((ht)->impl.keys, sizeof(*(ht)->impl.keys),                   \
+                               ht__default_key_hash(ht), ht__default_key_eq(ht),            \
+                               (ht)->impl.values, sizeof(*(ht)->impl.values),               \
+                               (ht)->impl.slots, (ht)->impl.hashes,                         \
+                               (ht)->impl.capacity, &(ht)->impl.filled_slots, &(ht)->count, \
+                               &(ht)->impl.temp_key)))
 
 // void ht_delete(Hash_Table(Key, Value) *ht, Value *value)
-#define ht_delete(ht, value_) \
-    ht__delete((ht)->values, sizeof(*(ht)->values), (ht)->slots, (ht)->capacity, &(ht)->count, value_)
+//
+// Delete the element by the pointer to its value slot. You can
+// get the value pointer via ht_find() or ht_foreach(). NULL is
+// a valid value pointer and will be simply ignored.
+#define ht_delete(ht, value) \
+    ht__delete((ht)->impl.values, sizeof(*(ht)->impl.values), (ht)->impl.slots, (ht)->impl.capacity, &(ht)->count, value)
 
+// bool ht_find_and_delete(Hash_Table(Key, Value) *ht, Key key)
+//
+// Combines together ht_find() and ht_delete() enabling you to delete the elements
+// by the keys. Returns true when the element was deleted, returns false when the
+// element doesn’t exist
+#define ht_find_and_delete(ht, key) \
+    (ht_find((ht), (key)), (ht)->impl.temp_value ? (ht_delete((ht), (ht)->impl.temp_value), true) : false)
 
 // Key ht_key(Hash_Table(Key, Value) *ht, Value *value)
-#define ht_key(ht, value_) (assert((ht)->values <= (value_)), (ht)->keys[(value_) - (ht)->values])
+//
+// Returns the key of the element by its value pointer. Useful in conjunction with ht_foreach()
+#define ht_key(ht, value) (assert((ht)->impl.values <= (value)), (ht)->impl.keys[(value) - (ht)->impl.values])
 
 // bool ht_next(Hash_Table(Key, Value) *ht, Value **value)
-#define ht_next(ht, value_) \
-    ht__next((ht)->slots, (ht)->capacity,         \
-             (ht)->keys, sizeof(*(ht)->keys),     \
-             (ht)->values, sizeof(*(ht)->values), \
-             &(ht)->key_, (void**)(value_))        \
+#define ht_next(ht, value)                                  \
+    ht__next((ht)->impl.slots, (ht)->impl.capacity,         \
+             (ht)->impl.values, sizeof(*(ht)->impl.values), \
+             (void**)(value))                               \
 
+// A foreach macro that iterates the values of the Hash Table.
+//
 // ```c
 // Hash_Table(const char*, int) ht = {0};
-// ht_foreach2(int, value, &ht) {
+// ht_foreach(int, value, &ht) {
 //     printf("%s => %d\n", ht_key(value), *value);
 // }
 // ```
-#define ht_foreach2(Type, iter, ht) \
+#define ht_foreach(Type, iter, ht) \
     for (Type *iter = NULL; ht_next((ht), &iter); )
-
-// ```c
-// Hash_Table(const char*, int) ht = {0};
-// ht_foreach1(&ht) {
-//     printf("%s => %d\n", ht.key, *ht.value);
-// }
-// ```
-#define ht_foreach1(ht)                               \
-    for (                                             \
-        (ht)->value = NULL;                           \
-        ht__next((ht)->slots, (ht)->capacity,         \
-                 (ht)->keys, sizeof(*(ht)->keys),     \
-                 (ht)->values, sizeof(*(ht)->values), \
-                 &(ht)->key_, (void**)&(ht)->value_); \
-    )
 
 // void ht_reset(Hash_Table(Key, Value) *ht)
 //
 // Removes all the elements from the hash table, but does not deallocate any memory, making the hash table
 // ready to be reused again.
-#define ht_reset(ht)                                              \
-    (memset((ht)->slots, 0, sizeof(*(ht)->slots)*(ht)->capacity), \
-     (ht)->filled_slots = 0,                                      \
-     (ht)->count = 0,                                             \
+#define ht_reset(ht)                                                             \
+    (memset((ht)->impl.slots, 0, sizeof(*(ht)->impl.slots)*(ht)->impl.capacity), \
+     (ht)->impl.filled_slots = 0,                                                \
+     (ht)->count = 0,                                                            \
      (void)0)
 
 // void ht_free(Hash_Table(Key, Value) *ht)
 //
 // Deallocates all the memory associated with the hash table and completely resets its state.
-#define ht_free(ht)                              \
-    (                                            \
-        free((ht)->keys),   (ht)->keys = NULL,   \
-        free((ht)->values), (ht)->values = NULL, \
-        free((ht)->slots),  (ht)->slots = NULL,  \
-        free((ht)->hashes), (ht)->hashes = NULL, \
-        (ht)->filled_slots = 0,                  \
-        (ht)->count = 0,                         \
-        (ht)->capacity = 0,                      \
-        (void)0                                  \
-    )
+#define ht_free(ht)                                     \
+    (free((ht)->impl.keys),   (ht)->impl.keys   = NULL, \
+     free((ht)->impl.values), (ht)->impl.values = NULL, \
+     free((ht)->impl.slots),  (ht)->impl.slots  = NULL, \
+     free((ht)->impl.hashes), (ht)->impl.hashes = NULL, \
+     (ht)->impl.filled_slots = 0,                       \
+     (ht)->count = 0,                                   \
+     (ht)->impl.capacity = 0,                           \
+     (void)0)
 
-#define HT_INIT_CAP 1024        // Must be power of 2
+#define HT_INIT_CAP 1024 // Must be power of 2
 #define HT_LOAD_FACTOR_PERCENT 70
-
-typedef uint32_t (*Key_Hash)(void const *key);
-typedef bool (*Key_Eq)(void const *a, void const *b);
 
 uint32_t ht_cstr_hash_djb2(void const *key);
 bool ht_cstr_eq(void const *a, void const *b);
@@ -168,9 +231,8 @@ typedef enum {
 // Private functions. Do not use directly. //////////////////////////////
 
 static bool ht__next(Ht_Slot *ht_slots, size_t ht_capacity,
-                     void *ht_keys, size_t ht_key_size,
                      void *ht_values, size_t ht_value_size,
-                     void *key, void **value);
+                     void **value);
 static void *ht__put_no_expand(void *ht_keys, size_t ht_key_size, Key_Hash key_hash, Key_Eq key_eq,
                                void *ht_values, size_t ht_value_size,
                                Ht_Slot *ht_slots, uint32_t *ht_hashes,
@@ -205,12 +267,12 @@ static void ht__delete(void *ht_values, size_t ht_value_size,
     #define ht__default_key_hash(ht)                       \
         ((ht)->key_hash ?                                  \
          (ht)->key_hash :                                  \
-         ht__generic_key_hash<decltype(*(ht)->keys)>())
+         ht__generic_key_hash<decltype(*(ht)->impl.keys)>())
 #else
     #define ht__default_key_hash(ht)                       \
         ((ht)->key_hash ?                                  \
          (ht)->key_hash :                                  \
-         _Generic(*(ht)->keys,                             \
+         _Generic(*(ht)->impl.keys,                        \
                   char*:                ht_cstr_hash_djb2, \
                   const char*:          ht_cstr_hash_djb2, \
                   unsigned char*:       ht_cstr_hash_djb2, \
@@ -227,12 +289,12 @@ static void ht__delete(void *ht_values, size_t ht_value_size,
     #define ht__default_key_eq(ht)                  \
         ((ht)->key_eq ?                             \
          (ht)->key_eq :                             \
-         ht__generic_key_eq<decltype(*(ht)->keys)>())
+         ht__generic_key_eq<decltype(*(ht)->impl.keys)>())
 #else
     #define ht__default_key_eq(ht)                  \
         ((ht)->key_eq ?                             \
          (ht)->key_eq :                             \
-         _Generic(*(ht)->keys,                      \
+         _Generic(*(ht)->impl.keys,                 \
                   char*:                ht_cstr_eq, \
                   const char*:          ht_cstr_eq, \
                   unsigned char*:       ht_cstr_eq, \
@@ -268,14 +330,11 @@ uint32_t ht_djb2(void const *data, size_t size)
 }
 
 static bool ht__next(Ht_Slot *ht_slots, size_t ht_capacity,
-                     void *ht_keys, size_t ht_key_size,
                      void *ht_values, size_t ht_value_size,
-                     void *key, void **value)
+                     void **value)
 {
-    assert(ht_key_size > 0);
     assert(ht_value_size > 0);
 
-    uint8_t *keys   = (uint8_t*)ht_keys;
     uint8_t *values = (uint8_t*)ht_values;
 
     if (*value == NULL) *value = ht_values;
@@ -286,7 +345,6 @@ static bool ht__next(Ht_Slot *ht_slots, size_t ht_capacity,
         index += 1;
     }
     if (index >= ht_capacity) return false;
-    memcpy(key, keys + index*ht_key_size, ht_key_size);
     *value = values + index*ht_value_size;
     return true;
 }
