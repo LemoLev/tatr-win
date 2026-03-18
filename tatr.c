@@ -936,13 +936,14 @@ static bool summary_run(Command *self, const char *program_name, int argc, char 
     } sorted_tags_count = {0};
 
     size_t max_width = 0;
-    ht_foreach(&tags_count) {
-        if (max_width < tags_count.key.count) {
-            max_width = tags_count.key.count;
+    ht_foreach2(size_t, value, &tags_count) {
+        String_View key = ht_key(&tags_count, value);
+        if (max_width < key.count) {
+            max_width = key.count;
         }
         da_append(&sorted_tags_count, ((Tag_Count) {
-            .tag = tags_count.key,
-            .count = *tags_count.value,
+            .tag = key,
+            .count = *value,
         }));
     }
 
