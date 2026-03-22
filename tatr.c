@@ -10,6 +10,9 @@
 #define DEFAULT_TASK_TITLE "New Task"
 #define DEFAULT_PRIORITY 100
 
+uint32_t sv_key_hash(void const* a);
+bool sv_key_eq(void const* a, void const* b);
+
 // Stolen from Jai's Unicode module
 static uint8_t bytes_for_utf8[] = {
     1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -35,6 +38,26 @@ static inline size_t sv_utf8_len(String_View sv, size_t *bytes_overrun)
         n += 1;
     }
     UNREACHABLE("sv_utf8_len");
+}
+
+bool chop_huid(String_View *content, String_View *huid)
+{
+    String_View copy = *content;
+    for (size_t i = 0; copy.count > 0 && i < 8; ++i) {
+        if (!isdigit(copy.data[0])) return false;
+        sv_chop_left(&copy, 1);
+    }
+    if (!sv_eq(sv_chop_left(&copy, 1), sv_from_cstr("-"))) {
+        return false;
+    }
+    for (size_t i = 0; copy.count > 0 && i < 6; ++i) {
+        if (!isdigit(copy.data[0])) return false;
+        sv_chop_left(&copy, 1);
+    }
+    huid->data  = content->data;
+    huid->count = copy.data - content->data;
+    *content = copy;
+    return true;
 }
 
 #define HUID_REGEXP_FOR_USER_REPORT_PURPOSES "/[0-9]{8}-[0-9]{6}/"
@@ -191,6 +214,7 @@ typedef struct {
     const char *status;
     Tags tags;
     int priority;
+    String_View task_md_content;
 } Task;
 
 static void append_task_md_content(String_Builder *sb, Task task)
@@ -271,7 +295,7 @@ static bool load_tasks(Tasks *tasks, const char *dir_path)
             nob_log(ERROR, "%s is not a directory", id);
             return false;
         }
-        sb.count = 0;
+        memset(&sb, 0, sizeof(sb));
         const char *task_md_path = temp_sprintf("%s/%s/TASK.md", dir_path, id);
         // TASK(20260308-171346): there should be a command that reports all the skipped weird folders and files found in the tasks/ folder
         if (!file_exists(task_md_path)) continue; // Ignore task folders without TASK.md
@@ -299,11 +323,12 @@ static bool load_tasks(Tasks *tasks, const char *dir_path)
         }
 
         da_append(tasks, ((Task) {
-            .id         = strdup(id),
-            .title      = title,
-            .status     = status,
-            .priority   = atoi(priority),
-            .tags       = tags,
+            .id              = strdup(id),
+            .title           = title,
+            .status          = status,
+            .priority        = atoi(priority),
+            .tags            = tags,
+            .task_md_content = sb_to_sv(sb),
         }));
     }
 
@@ -859,6 +884,68 @@ static bool find_run(Command *self, const char *program_name, int argc, char **a
     return true;
 }
 
+static bool graph_run(Command *self, const char *program_name, int argc, char **argv)
+{
+    UNUSED(self);
+    UNUSED(program_name);
+    UNUSED(argc);
+    UNUSED(argv);
+
+    const char *dir_path = find_tasks_database();
+    if (!dir_path) return false;
+
+    Tasks tasks = {0};
+    if (!load_tasks(&tasks, dir_path)) return false;
+
+    typedef Hash_Table(String_View, bool) HUIDs;
+    Hash_Table(const char *, HUIDs) graph = {0};
+    da_foreach(Task, task, &tasks) {
+        HUIDs *ref = ht_put(&graph, task->id);
+        ref->key_hash = sv_key_hash;
+        ref->key_eq   = sv_key_eq;
+        String_View content = task->task_md_content;
+        while (content.count > 0) {
+            String_View huid = {0};
+            if (chop_huid(&content, &huid)) {
+                *ht_put(ref, huid) = true;
+            } else {
+                sv_chop_left(&content, 1);
+            }
+        }
+    }
+
+    String_Builder sb = {0};
+
+    sb_appendf(&sb, "digraph {\n");
+    ht_foreach(HUIDs, ref, &graph) {
+        const char *orig = ht_key(&graph, ref);
+        if (ref->count == 0) continue;
+        ht_foreach(bool, huid, ref) {
+            String_View nbor = ht_key(ref, huid);
+            sb_appendf(&sb, "    \"%s\" -> \""SV_Fmt"\";\n", orig, SV_Arg(nbor));
+        }
+    }
+    sb_appendf(&sb, "}\n");
+
+    const char *format = "svg";
+    const char *dot_path = "graph.dot";
+    const char *out_path = temp_sprintf("graph.%s", format);
+    if (!write_entire_file(dot_path, sb.items, sb.count)) return false;
+    nob_log(INFO, "Generated %s", dot_path);
+
+    Cmd cmd = {0};
+    // cmd_append(&cmd, "dot");
+    cmd_append(&cmd, "neato");
+    // cmd_append(&cmd, "twopi");
+    cmd_append(&cmd, "-Goverlap=scale");
+    cmd_append(&cmd, temp_sprintf("-T%s", format));
+    cmd_append(&cmd, dot_path);
+    cmd_append(&cmd, temp_sprintf("-o%s", out_path));
+    if (!cmd_run(&cmd)) return false;
+
+    return true;
+}
+
 uint32_t sv_key_hash(void const* a)
 {
     String_View const* a_typed = a;
@@ -998,6 +1085,11 @@ static Command commands[] = {
         .signature = "<HUID> [OPTIONS]",
         .description = "Find the task with a given HUID",
         .run = find_run,
+    },
+    {
+        .name = "graph",
+        .description = "Generate graph of tasks cross-referring to each other",
+        .run = graph_run,
     },
     {
         .name = "help",
