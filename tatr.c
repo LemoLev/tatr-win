@@ -210,6 +210,7 @@ bool tags_contains(Tags tags, String_View tag)
 
 typedef struct {
     const char *id;
+    // TASK(20260322-204811): use String_View for Task.title and Task.status that refer to the TASK.md content
     const char *title;
     const char *status;
     Tags tags;
