@@ -157,7 +157,7 @@ int main(int argc, char **argv)
     cmd_append(&cmd, "-Wswitch-enum");
     cmd_append(&cmd, "-Wno-unused-function");
     // cmd_append(&cmd, "-fsanitize=undefined,memory");
-    cmd_append(&cmd, "-pedantic");
+    // cmd_append(&cmd, "-pedantic");
     cmd_append(&cmd, "-ggdb");
     cmd_append(&cmd, "-o", BUILD_FOLDER"tatr");
     cmd_append(&cmd, "tatr.c");

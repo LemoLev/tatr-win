@@ -10,9 +10,6 @@
 #define DEFAULT_TASK_TITLE "New Task"
 #define DEFAULT_PRIORITY 100
 
-uint32_t sv_key_hash(void const* a);
-bool sv_key_eq(void const* a, void const* b);
-
 // Stolen from Jai's Unicode module
 static uint8_t bytes_for_utf8[] = {
     1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -898,12 +895,15 @@ static bool graph_run(Command *self, const char *program_name, int argc, char **
     Tasks tasks = {0};
     if (!load_tasks(&tasks, dir_path)) return false;
 
-    typedef Hash_Table(String_View, bool) HUIDs;
-    Hash_Table(const char *, HUIDs) graph = {0};
+    typedef Ht(String_View, bool) HUIDs;
+    Ht(const char *, HUIDs) graph = {
+        .hasheq = ht_cstr_hasheq,
+        .default_value = {
+            .hasheq = ht_sv_hasheq,
+        }
+    };
     da_foreach(Task, task, &tasks) {
         HUIDs *ref = ht_put(&graph, task->id);
-        ref->key_hash = sv_key_hash;
-        ref->key_eq   = sv_key_eq;
         String_View content = task->task_md_content;
         while (content.count > 0) {
             String_View huid = {0};
@@ -918,10 +918,10 @@ static bool graph_run(Command *self, const char *program_name, int argc, char **
     String_Builder sb = {0};
 
     sb_appendf(&sb, "digraph {\n");
-    ht_foreach(HUIDs, ref, &graph) {
+    ht_foreach(ref, &graph) {
         const char *orig = ht_key(&graph, ref);
         if (ref->count == 0) continue;
-        ht_foreach(bool, huid, ref) {
+        ht_foreach(huid, ref) {
             String_View nbor = ht_key(ref, huid);
             sb_appendf(&sb, "    \"%s\" -> \""SV_Fmt"\";\n", orig, SV_Arg(nbor));
         }
@@ -945,19 +945,6 @@ static bool graph_run(Command *self, const char *program_name, int argc, char **
     if (!cmd_run(&cmd)) return false;
 
     return true;
-}
-
-uint32_t sv_key_hash(void const* a)
-{
-    String_View const* a_typed = a;
-    return ht_djb2(a_typed->data, a_typed->count);
-}
-
-bool sv_key_eq(void const* a, void const* b)
-{
-    String_View const* a_typed = a;
-    String_View const* b_typed = b;
-    return sv_eq(*a_typed, *b_typed);
 }
 
 typedef struct {
@@ -999,9 +986,8 @@ static bool summary_run(Command *self, const char *program_name, int argc, char 
     if (!load_tasks(&tasks, dir_path)) return false;
     size_t total_count = 0;
     size_t untagged_count = 0;
-    Hash_Table(String_View, size_t) tags_count = {
-        .key_hash = sv_key_hash,
-        .key_eq = sv_key_eq,
+    Ht(String_View, size_t) tags_count = {
+        .hasheq = ht_sv_hasheq,
     };
     for (size_t i = 0; i < tasks.count; ++i) {
         Task *task = &tasks.items[i];
@@ -1024,7 +1010,7 @@ static bool summary_run(Command *self, const char *program_name, int argc, char 
     } sorted_tags_count = {0};
 
     size_t max_width = 0;
-    ht_foreach(size_t, value, &tags_count) {
+    ht_foreach(value, &tags_count) {
         String_View key = ht_key(&tags_count, value);
         if (max_width < key.count) {
             max_width = key.count;
