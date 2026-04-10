@@ -333,6 +333,22 @@ static bool load_tasks(Tasks *tasks, const char *dir_path)
     return true;
 }
 
+typedef int (*Task_Compare)(const void *a, const void *b);
+
+static int task_compare_id(const void *a, const void *b)
+{
+    const Task *ta = a;
+    const Task *tb = b;
+    return strcmp(ta->id, tb->id);
+}
+
+static int task_compare_id_reverse(const void *a, const void *b)
+{
+    const Task *ta = a;
+    const Task *tb = b;
+    return strcmp(tb->id, ta->id);
+}
+
 static int task_compare_priority_reverse(const void *a, const void *b)
 {
     const Task *ta = a;
@@ -345,6 +361,24 @@ static int task_compare_priority(const void *a, const void *b)
     const Task *ta = a;
     const Task *tb = b;
     return ta->priority - tb->priority;
+}
+
+static Task_Compare task_sorter(bool by_id, bool ascending)
+{
+    if (by_id) {
+        if (ascending) {
+            return task_compare_id;
+        } else {
+            return task_compare_id_reverse;
+        }
+    } else {
+        if (ascending) {
+            return task_compare_priority;
+        } else {
+            return task_compare_priority_reverse;
+        }
+    }
+    UNREACHABLE("task_sorter");
 }
 
 typedef struct Command Command;
@@ -645,11 +679,13 @@ static bool ls_run(Command *self, const char *program_name, int argc, char **arg
     bool ascending = false;
     bool help = false;
     bool debug = false;
+    bool by_id = false;
     String_Builder filter_src = {0};
 
     void *c = flag_c_new(program_name);
     flag_c_bool_var(c, &closed, "c", false, "List closed tasks");
     flag_c_bool_var(c, &ascending, "a", false, "List tasks in ascending order");
+    flag_c_bool_var(c, &by_id, "id", false, "Sort tasks by id");
     flag_c_bool_var(c, &debug, "debug", false, "Output opcodes of the filter for debug purpose");
     flag_c_bool_var(c, &help, "help", false, "Print this help message");
 
@@ -697,11 +733,7 @@ static bool ls_run(Command *self, const char *program_name, int argc, char **arg
 
     Tasks tasks = {0};
     if (!load_tasks(&tasks, dir_path)) return false;
-    if (ascending) {
-        qsort(tasks.items, tasks.count, sizeof(*tasks.items), task_compare_priority);
-    } else {
-        qsort(tasks.items, tasks.count, sizeof(*tasks.items), task_compare_priority_reverse);
-    }
+    qsort(tasks.items, tasks.count, sizeof(*tasks.items), task_sorter(by_id, ascending));
 
     Stack stack = {0};
 
