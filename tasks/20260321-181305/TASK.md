@@ -1,7 +1,7 @@
 # `tatr ls` relative paths are broken
 
 - STATUS: OPEN
-- PRIORITY: 100
+- PRIORITY: 120
 - TAGS: bug
 
 Repro:
@@ -23,3 +23,17 @@ weird folders and files found in the tasks/ folder
 the main repo
 ../asks/<HUID>/TASK.md:1: [PRIORITY: 50 , TAGS: release] Presentable to GitHub README
 ```
+
+---
+
+I think I know what's the problem
+
+![2026-05-11-074919_1423x794_scrot.png](./2026-05-11-074919_1423x794_scrot.png)
+
+`relative_path()` function is too naive
+
+---
+
+It would be nice if nob.h just had a special type for file paths or what not:
+
+[./path.c](./path.c)

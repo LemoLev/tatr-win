@@ -1218,6 +1218,12 @@ int main(int argc, char **argv)
             .src_path = "/home_/rexim/Programming/tsoding/sofren/tasks",
             .rel_path = "../../../../../../rexim/Programming/tsoding/sofren/tasks",
         },
+        {
+            .description = "20260321-181305",
+            .dst_path = "/home/rexim/Programming/tsoding/tatr/tasks",
+            .src_path = "/home/rexim/Programming/tsoding/tatr/thirdparty",
+            .rel_path = "../tasks",
+        },
     };
 
     bool record = false;

@@ -121,10 +121,23 @@ bool test_ls_filter_report_error_utf8(Test_Runner *r)
     return true;
 }
 
+void cc(Cmd *cmd)
+{
+    cmd_append(cmd, "clang");
+    cmd_append(cmd, "-Wall");
+    cmd_append(cmd, "-Wextra");
+    cmd_append(cmd, "-Wswitch-enum");
+    cmd_append(cmd, "-Wno-unused-function");
+    cmd_append(cmd, "-fsanitize=undefined,memory");
+    if (0) cmd_append(cmd, "-pedantic");
+    cmd_append(cmd, "-ggdb");
+}
+
 int main(int argc, char **argv)
 {
     GO_REBUILD_URSELF(argc, argv);
     Cmd cmd = {0};
+    Procs procs = {0};
 
     bool no_test = false;
     bool run = false;
@@ -151,19 +164,23 @@ int main(int argc, char **argv)
 
     if (!mkdir_if_not_exists(BUILD_FOLDER)) return 1;
 
-    cmd_append(&cmd, "clang");
-    cmd_append(&cmd, "-Wall");
-    cmd_append(&cmd, "-Wextra");
-    cmd_append(&cmd, "-Wswitch-enum");
-    cmd_append(&cmd, "-Wno-unused-function");
-    // cmd_append(&cmd, "-fsanitize=undefined,memory");
-    // cmd_append(&cmd, "-pedantic");
-    cmd_append(&cmd, "-ggdb");
+    cc(&cmd);
     cmd_append(&cmd, "-o", BUILD_FOLDER"tatr");
     cmd_append(&cmd, "tatr.c");
-    if (!cmd_run(&cmd)) return 1;
+    if (!cmd_run(&cmd, .async = &procs)) return 1;
+
+    cc(&cmd);
+    cmd_append(&cmd, "-DTASKS_TEST");
+    cmd_append(&cmd, "-o", BUILD_FOLDER"tatr-test");
+    cmd_append(&cmd, "tatr.c");
+    if (!cmd_run(&cmd, .async = &procs)) return 1;
+
+    if (!procs_flush(&procs)) return 1;
 
     if (!no_test) {
+        cmd_append(&cmd, BUILD_FOLDER"tatr-test");
+        if (!cmd_run(&cmd)) return 1;
+
         Test_Runner r = {0};
         if (!test_ls_filter_negation_of_complex_expression_in_parens(&r)) return 1;
         if (!test_ls_filter_not_stuck_to_open_paren(&r)) return 1;
