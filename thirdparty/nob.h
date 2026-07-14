@@ -1,4 +1,4 @@
-/* nob - v3.8.2 - Public Domain - https://github.com/tsoding/nob.h
+/* nob - v3.8.3 - Public Domain - https://github.com/tsoding/nob.h
 
    This library is the next generation of the [NoBuild](https://github.com/tsoding/nobuild) idea.
 
@@ -2635,6 +2635,11 @@ NOBDEF Nob_String_View nob_sv_trim_left(Nob_String_View sv)
         i += 1;
     }
 
+    // Apparently if sv.data == 0 and i == 0 adding them
+    // together is an undefined behavior. According to
+    // clang's UndefinedBehaviorSanitizer at least.
+    if (i == 0) return sv;
+
     return nob_sv_from_parts(sv.data + i, sv.count - i);
 }
 
@@ -3028,6 +3033,7 @@ NOBDEF char *nob_temp_running_executable_path(void)
 /*
    Revision history:
 
+      3.8.3 (2026-07-14) Fix "applying zero offset to null pointer" error by clang's UndefinedBehaviorSanitizer
       3.8.2 (2026-04-01) Fix the broken type safety of nob_cmd_append() (by @aalmkainzi)
       3.8.1 (2026-04-01) Fix annoying clang warning
       3.8.0 (2026-03-24) Add NOB_CLIT()
