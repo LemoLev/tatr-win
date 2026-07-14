@@ -1026,7 +1026,8 @@ static bool summary_run(Command *self, const char *program_name, int argc, char 
         if (!read_entire_file(tags_desc_path, &sb)) return false;
         String_View sv = sb_to_sv(sb);
         for (size_t line_number = 0; sv.count > 0; ++line_number) {
-            String_View line = sv_chop_by_delim(&sv, '\n');
+            String_View line = sv_trim(sv_chop_by_delim(&sv, '\n'));
+            if (line.count == 0) continue;
             String_View tag  = sv_trim(sv_chop_by_delim(&line, ','));
             String_View desc = sv_trim(line);
             String_View *slot = ht_find(&tags_desc, tag);
