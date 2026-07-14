@@ -1016,6 +1016,29 @@ static bool summary_run(Command *self, const char *program_name, int argc, char 
     if (!dir_path) return false;
     Tasks tasks = {0};
     if (!load_tasks(&tasks, dir_path)) return false;
+
+    Ht(String_View, String_View) tags_desc = {
+        .hasheq = ht_sv_hasheq,
+    };
+    const char *tags_desc_path = temp_sprintf("%s/tags", dir_path);
+    if (file_exists(tags_desc_path)) {
+        String_Builder sb = {0};
+        if (!read_entire_file(tags_desc_path, &sb)) return false;
+        String_View sv = sb_to_sv(sb);
+        for (size_t line_number = 0; sv.count > 0; ++line_number) {
+            String_View line = sv_chop_by_delim(&sv, '\n');
+            String_View tag  = sv_trim(sv_chop_by_delim(&line, ','));
+            String_View desc = sv_trim(line);
+            String_View *slot = ht_find(&tags_desc, tag);
+            if (slot) {
+                fprintf(stderr, "%s:%zu: WARNING: redefinition of tag description '"SV_Fmt"'\n", tags_desc_path, line_number, SV_Arg(tag));
+            } else {
+                slot = ht_put(&tags_desc, tag);
+            }
+            *slot = desc;
+        }
+    }
+
     size_t total_count = 0;
     size_t untagged_count = 0;
     Ht(String_View, size_t) tags_count = {
@@ -1066,7 +1089,12 @@ static bool summary_run(Command *self, const char *program_name, int argc, char 
         size_t mark = temp_save();
         da_foreach(Tag_Count, tag_count, &sorted_tags_count) {
             temp_rewind(mark);
-            printf("    %*s => %zu\n", (int)max_width, temp_sv_to_cstr(tag_count->tag), tag_count->count);
+            String_View *tag_desc = ht_find(&tags_desc, tag_count->tag);
+            if (tag_desc) {
+                printf("    %*s => %3zu - "SV_Fmt"\n", (int)max_width, temp_sv_to_cstr(tag_count->tag), tag_count->count, SV_Arg(*tag_desc));
+            } else {
+                printf("    %*s => %3zu\n", (int)max_width, temp_sv_to_cstr(tag_count->tag), tag_count->count);
+            }
         }
     }
 

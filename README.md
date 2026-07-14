@@ -24,6 +24,19 @@ As you work on the Task feel free append any discovered details about the Task t
 
 Use `git-blame` and `git-log` to learn about when, how and by whom any changes to the Task were made.
 
+### Tag descriptions
+
+There might be an optional `tasks/tags` file with the following format:
+
+```
+<tag-name> , <tag-description>
+<tag-name> , <tag-description>
+<tag-name> , <tag-description>
+...
+```
+
+It serves as a documentation for each existing tag and the thirdparty tools may use it to display the tag descriptions.
+
 ## `tasks` utility
 
 There is a simple tool for manipulating the Tasks database [tasks.c](./tasks.c). Just compile it and start using it:

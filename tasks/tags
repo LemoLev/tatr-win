@@ -1,0 +1,4 @@
+bug , unintended behavior of the system that needs correction
+stream , a good stream topic
+release , things that are planned for the next release
+emacs , things related to tatr.el but was moved out of the repo
