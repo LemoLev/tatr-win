@@ -4,6 +4,7 @@
 #include "ht.h"
 
 #include "path.h"
+#include "git_hash.h"
 
 #define DEFAULT_TASK_TITLE "New Task"
 #define DEFAULT_PRIORITY 100
@@ -1050,6 +1051,18 @@ static bool summary_run(Command *self, const char *program_name, int argc, char 
 
 static bool help_run(Command *self, const char *program_name, int argc, char **argv);
 
+static bool version_run(Command *self, const char *program_name, int argc, char **argv)
+{
+    UNUSED(self);
+    UNUSED(program_name);
+    UNUSED(argc);
+    UNUSED(argv);
+    printf("tatr - Task Tracker\n");
+    printf("Built at %s\n", BUILD_TIME);
+    printf("GIT HASH: "GIT_HASH"\n");
+    return true;
+}
+
 static Command commands[] = {
     {
         .name = "init",
@@ -1090,6 +1103,11 @@ static Command commands[] = {
         .signature = "[OPTIONS]",
         .description = "Print this help message",
         .run = help_run,
+    },
+    {
+        .name = "version",
+        .description = "Print the current version and date of the build",
+        .run =  version_run,
     },
 };
 

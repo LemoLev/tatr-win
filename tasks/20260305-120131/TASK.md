@@ -1,6 +1,6 @@
 # `tatr version` command that prints current version, date of build and git commit hash
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 30
 - TAGS: release
 
@@ -12,4 +12,4 @@ anything changes later.
 
 ---
 
-Wtf are you even talking about me from the past?!
+Wtf are you even talking about me from the past?! I just implemented!

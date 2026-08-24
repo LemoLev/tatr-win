@@ -133,8 +133,44 @@ void cc(Cmd *cmd)
     // cmd_append(cmd, "-fsanitize=undefined,memory");
     cmd_append(cmd, "-I.");
     cmd_append(cmd, "-I"THIRDPARTY_FOLDER);
+    cmd_append(cmd, "-I"BUILD_FOLDER);
     if (0) cmd_append(cmd, "-pedantic");
     cmd_append(cmd, "-ggdb");
+}
+
+const char *get_current_date_rfc822(void)
+{
+    static const char *WEEKDAYS[] = {
+        "Mon", "Tue", "Wed",
+        "Thu", "Fri", "Sat",
+        "Sun",
+    };
+
+    static const char *MONTHS[] = {
+        "Jan", "Feb", "Mar",
+        "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep",
+        "Oct", "Nov", "Dec",
+    };
+
+    time_t rawtime;
+    time(&rawtime);
+    struct tm *timeinfo = localtime(&rawtime);
+
+    String_Builder sb = {0};
+    sb_appendf(&sb, "%s, ",  WEEKDAYS[timeinfo->tm_wday - 1]);
+    sb_appendf(&sb, "%02d ", timeinfo->tm_mday);
+    sb_appendf(&sb, "%s ",   MONTHS[timeinfo->tm_mon]);
+    sb_appendf(&sb, "%04d ", timeinfo->tm_year+1900);
+    sb_appendf(&sb, "%02d:", timeinfo->tm_hour);
+    sb_appendf(&sb, "%02d:", timeinfo->tm_min);
+    sb_appendf(&sb, "%02d ", timeinfo->tm_sec);
+    const char *zone = timeinfo->tm_zone;
+    assert(strlen(zone) == 3);
+    sb_append_cstr(&sb, zone);
+    sb_append_cstr(&sb, "00");
+    sb_append_null(&sb);
+    return sb.items;
 }
 
 int main(int argc, char **argv)
@@ -167,6 +203,26 @@ int main(int argc, char **argv)
     }
 
     if (!mkdir_if_not_exists(BUILD_FOLDER)) return 1;
+
+    cmd_append(&cmd, "git");
+    cmd_append(&cmd, "rev-parse");
+    cmd_append(&cmd, "HEAD");
+    if (!cmd_run(&cmd, .stdout_path = BUILD_FOLDER"git_hash.txt")) return 1;
+
+    String_Builder sb_git_hash = {0};
+    sb_appendf(&sb_git_hash, "#ifndef GIT_HASH_H_\n");
+    sb_appendf(&sb_git_hash, "#define GIT_HASH_H_\n");
+    sb_appendf(&sb_git_hash, "#define GIT_HASH \"");
+    if (!read_entire_file(BUILD_FOLDER"git_hash.txt", &sb_git_hash)) return 1;
+    while (sb_git_hash.count > 0 && isspace(da_last(&sb_git_hash))) {
+        da_pop(&sb_git_hash);
+    }
+    sb_appendf(&sb_git_hash, "\"\n");
+
+
+    sb_appendf(&sb_git_hash, "#define BUILD_TIME \"%s\"\n", get_current_date_rfc822());
+    sb_appendf(&sb_git_hash, "#endif // GIT_HASH_H_\n");
+    if (!write_entire_file(BUILD_FOLDER"git_hash.h", sb_git_hash.items, sb_git_hash.count)) return 1;
 
     cc(&cmd);
     cmd_append(&cmd, "-o", BUILD_FOLDER"tatr");
