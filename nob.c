@@ -130,7 +130,7 @@ void cc(Cmd *cmd)
     cmd_append(cmd, "-Wextra");
     cmd_append(cmd, "-Wswitch-enum");
     cmd_append(cmd, "-Wno-unused-function");
-    // cmd_append(cmd, "-fsanitize=undefined,memory");
+    cmd_append(cmd, "-fsanitize=undefined,memory");
     cmd_append(cmd, "-I.");
     cmd_append(cmd, "-I"THIRDPARTY_FOLDER);
     cmd_append(cmd, "-I"BUILD_FOLDER);
