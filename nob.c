@@ -4,7 +4,9 @@
 #define FLAG_IMPLEMENTATION
 #include "./thirdparty/flag.h"
 
-#define BUILD_FOLDER "build/"
+#define BUILD_FOLDER      "build/"
+#define SRC_FOLDER        "src/"
+#define THIRDPARTY_FOLDER "thirdparty/"
 
 typedef struct {
     Cmd cmd;
@@ -128,7 +130,9 @@ void cc(Cmd *cmd)
     cmd_append(cmd, "-Wextra");
     cmd_append(cmd, "-Wswitch-enum");
     cmd_append(cmd, "-Wno-unused-function");
-    cmd_append(cmd, "-fsanitize=undefined,memory");
+    // cmd_append(cmd, "-fsanitize=undefined,memory");
+    cmd_append(cmd, "-I.");
+    cmd_append(cmd, "-I"THIRDPARTY_FOLDER);
     if (0) cmd_append(cmd, "-pedantic");
     cmd_append(cmd, "-ggdb");
 }
@@ -166,16 +170,14 @@ int main(int argc, char **argv)
 
     cc(&cmd);
     cmd_append(&cmd, "-o", BUILD_FOLDER"tatr");
-    cmd_append(&cmd, "tatr.c");
-    if (!cmd_run(&cmd, .async = &procs)) return 1;
+    cmd_append(&cmd, SRC_FOLDER"tatr.c");
+    if (!cmd_run(&cmd)) return 1;
 
     cc(&cmd);
     cmd_append(&cmd, "-DTASKS_TEST");
     cmd_append(&cmd, "-o", BUILD_FOLDER"tatr-test");
-    cmd_append(&cmd, "tatr.c");
-    if (!cmd_run(&cmd, .async = &procs)) return 1;
-
-    if (!procs_flush(&procs)) return 1;
+    cmd_append(&cmd, SRC_FOLDER"tatr.c");
+    if (!cmd_run(&cmd)) return 1;
 
     if (!no_test) {
         cmd_append(&cmd, BUILD_FOLDER"tatr-test");

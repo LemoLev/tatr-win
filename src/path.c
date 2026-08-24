@@ -3,25 +3,8 @@
 #include <stdbool.h>
 #include <string.h>
 
-#define NOB_IMPLEMENTATION
-#include "nob.h"
-
-#ifdef _WIN32
-    #define PATH_SEP "\\"
-#else
-    #define PATH_SEP "/"
-#endif // _WIN32
-
-typedef struct {
-#ifdef _WIN32
-    String_View disk;
-#endif // _WIN32
-    String_View *items;
-    size_t count;
-    size_t capacity;
-} Path;
-
-void path_normalize(Path *dst, Path src) {
+void path_normalize(Path *dst, Path src)
+{
     // TODO: double check with python path normalization implementation
     for (size_t i = 0; i < src.count; ++i) {
         String_View sv = src.items[i];
@@ -68,29 +51,33 @@ void path_parse(Path *path, String_View sv)
     }
 }
 
-void path_relative(Path *relative, Path current, Path target)
+void path_relative(Path *rel, Path src, Path dst)
 {
     // Both paths are expected to be absolute and normalized
-    assert(sv_eq(da_first(&current), sv_from_cstr("")));
-    assert(sv_eq(da_first(&target), sv_from_cstr("")));
+    assert(sv_eq(da_first(&src), sv_from_cstr("")));
+    assert(sv_eq(da_first(&dst), sv_from_cstr("")));
 
-    relative->count = 0;
+    rel->count = 0;
 
     size_t i = 0;
-    while (i < current.count && i < target.count && sv_eq(current.items[i], target.items[i])) {
+    while (i < src.count && i < dst.count && sv_eq(src.items[i], dst.items[i])) {
         i += 1;
     }
 
-    for (size_t j = i; j < current.count; ++j) {
-        da_append(relative, sv_from_cstr(".."));
+    for (size_t j = i; j < src.count; ++j) {
+        da_append(rel, sv_from_cstr(".."));
     }
 
-    for (size_t j = i; j < target.count; ++j) {
-        da_append(relative, target.items[j]);
+    if (rel->count == 0) {
+        da_append(rel, sv_from_cstr("."));
+    }
+
+    for (size_t j = i; j < dst.count; ++j) {
+        da_append(rel, dst.items[j]);
     }
 }
 
-int main()
+static void test_path(void)
 {
     printf("------------------------------\n");
 
@@ -206,6 +193,13 @@ int main()
             printf("\"" SV_Fmt "\"\n", SV_Arg(*item));
         }
     }
+}
 
-    return 0;
+bool path_eq(Path a, Path b)
+{
+    if (a.count != b.count) return false;
+    for (size_t i = 0; i < a.count; ++i) {
+        if (!sv_eq(a.items[i], b.items[i])) return false;
+    }
+    return true;
 }

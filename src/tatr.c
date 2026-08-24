@@ -1,11 +1,9 @@
 // Simple tool for manipulating tasks database
-#define NOB_IMPLEMENTATION
-#include "./thirdparty/nob.h"
-#define FLAG_IMPLEMENTATION
-#define FLAG_PUSH_DASH_DASH_BACK
-#include "./thirdparty/flag.h"
-#define HT_IMPLEMENTATION
-#include "./thirdparty/ht.h"
+#include "nob.h"
+#include "flag.h"
+#include "ht.h"
+
+#include "path.h"
 
 #define DEFAULT_TASK_TITLE "New Task"
 #define DEFAULT_PRIORITY 100
@@ -229,23 +227,31 @@ static void print_task(const char *rel_path, Task *task)
     }
 }
 
-static const char *find_tasks_database(void)
+static bool get_current_dir_path(Path *cwd_path)
 {
-    const char *dir = get_current_dir_temp();
-    if (!dir) return NULL;
-    while (strcmp(dir, "/") != 0) {
-        const char *path = temp_sprintf("%s/tasks", dir);
-        int exists = nob_file_exists(path);
-        if (exists < 0) return NULL;
-        if (exists) {
+    const char *cwd_path_cstr = get_current_dir_temp();
+    if (!cwd_path_cstr) return false;
+    path_parse(cwd_path, sv_from_cstr(get_current_dir_temp()));
+    return true;
+}
+
+static bool find_tasks_database(Path *dir_path)
+{
+    String_Builder sb_path = {0};
+    if (!get_current_dir_path(dir_path)) return false;
+    assert(dir_path->count > 0 && sv_eq(dir_path->items[0], SVLIT("")));
+    while (dir_path->count > 1) {
+        da_append(dir_path, SVLIT("tasks"));
+        const char *path = path_render_cstr(&sb_path, *dir_path);
+        if (file_exists(path)) {
             File_Type type = get_file_type(path);
-            if (type < 0) return NULL;
-            if (type == FILE_DIRECTORY) return path;
+            if (type < 0) return false;
+            if (type == FILE_DIRECTORY) return true;
         }
-        dir = temp_dir_name(dir);
+        dir_path->count -= 2;
     }
     nob_log(ERROR, "Could not find tasks/ folder");
-    return NULL;
+    return false;
 }
 
 static bool load_tasks(Tasks *tasks, const char *dir_path)
@@ -362,55 +368,6 @@ struct Command {
     const char *signature;
     bool (*run)(Command *self, const char *program_name, int argc, char **argv);
 };
-
-// Both dst_path and src_path are expected to be absolute
-// TODO: Would be great to normalize the paths before processing them
-static const char *relative_path(const char *dst_path, const char *src_path)
-{
-    while (*dst_path && *src_path && *dst_path == *src_path) {
-        dst_path++;
-        src_path++;
-    }
-
-    size_t backtrack = 0;
-    while (src_path && *src_path == '/') src_path++;
-    while (src_path && *src_path) {
-        backtrack += 1;
-        src_path = strchr(src_path, '/');
-        while (src_path && *src_path == '/') src_path++;
-    }
-
-    while (dst_path && *dst_path == '/') dst_path++;
-    size_t dst_len = strlen(dst_path);
-
-    if (backtrack > 0) {
-        const char *up = "../";
-        size_t up_len = strlen(up);
-        size_t result_len = backtrack*up_len + dst_len;
-        char *result = temp_alloc(result_len + 1);
-        for (size_t i = 0; i < backtrack; ++i) {
-            memcpy(result + i*up_len, up, up_len);
-        }
-        memcpy(result + backtrack*up_len, dst_path, dst_len);
-        result[result_len] = '\0';
-        while (result_len > 0 && result[result_len-1] == '/') {
-            result[--result_len] = '\0';
-        }
-        return result;
-    }
-
-    const char *here = "./";
-    size_t here_len = strlen(here);
-    size_t result_len = here_len + dst_len;
-    char *result = temp_alloc(result_len + 1);
-    memcpy(result, here, here_len);
-    memcpy(result + here_len, dst_path, dst_len);
-    result[result_len] = '\0';
-    while (result_len > 0 && result[result_len-1] == '/') {
-        result[--result_len] = '\0';
-    }
-    return result;
-}
 
 static void print_command_usage(Command *command, const char *program_name, void *c)
 {
@@ -696,16 +653,19 @@ static bool ls_run(Command *self, const char *program_name, int argc, char **arg
         return true;
     }
 
-    const char *dir_path = find_tasks_database();
-    if (!dir_path) return false;
+    Path dir_path = {0};
+    if (!find_tasks_database(&dir_path)) return false;
 
-    const char *cwd_path = get_current_dir_temp();
-    if (!cwd_path) return false;
+    Path cwd_path = {0};
+    if (!get_current_dir_path(&cwd_path)) return false;
 
-    const char *rel_path = relative_path(dir_path, cwd_path);
+    Path rel_path = {0};
+    path_relative(&rel_path, cwd_path, dir_path);
+
+    String_Builder sb = {0};
 
     Tasks tasks = {0};
-    if (!load_tasks(&tasks, dir_path)) return false;
+    if (!load_tasks(&tasks, path_render_cstr(&sb, dir_path))) return false;
     qsort(tasks.items, tasks.count, sizeof(*tasks.items), task_sorter(by_id, ascending));
 
     Stack stack = {0};
@@ -714,7 +674,7 @@ static bool ls_run(Command *self, const char *program_name, int argc, char **arg
     da_foreach(Task, task, &tasks) {
         if (strcmp(task->status, closed ? "CLOSED" : "OPEN") != 0) continue;
         if (!task_matches_filter(task, filter, &stack)) continue;
-        print_task(rel_path, task);
+        print_task(path_render_cstr(&sb, rel_path), task);
         tasks_matched += 1;
     }
 
@@ -758,8 +718,16 @@ static bool new_run(Command *self, const char *program_name, int argc, char **ar
         return true;
     }
 
-    const char *dir_path = find_tasks_database();
-    if (!dir_path) return false;
+    String_Builder sb_dir_path = {0};
+
+    Path dir_path = {0};
+    if (!find_tasks_database(&dir_path)) return false;
+
+    Path cwd_path = {0};
+    if (!get_current_dir_path(&cwd_path)) return false;
+
+    Path rel_path = {0};
+    path_relative(&rel_path, cwd_path, dir_path);
 
     time_t rawtime;
     time(&rawtime);
@@ -771,7 +739,7 @@ static bool new_run(Command *self, const char *program_name, int argc, char **ar
         timeinfo->tm_hour,
         timeinfo->tm_min,
         timeinfo->tm_sec);
-    const char *task_path = temp_sprintf("%s/%s", dir_path, id);
+    const char *task_path = temp_sprintf("%s/%s", path_render_cstr(&sb_dir_path, dir_path), id);
     int exists = file_exists(task_path);
     if (exists < 0) return false;
     if (exists) {
@@ -779,7 +747,6 @@ static bool new_run(Command *self, const char *program_name, int argc, char **ar
         return false;
     }
     if (!mkdir_if_not_exists(task_path)) return false;
-    String_Builder sb = {0};
     const char *title = DEFAULT_TASK_TITLE;
     if (sb_title.count > 0) {
         sb_append_null(&sb_title);
@@ -797,16 +764,14 @@ static bool new_run(Command *self, const char *program_name, int argc, char **ar
         da_append(&task.tags, sv_from_cstr(*tag));
     }
 
-    append_task_md_content(&sb, task);
-    const char *task_md_path = temp_sprintf("%s/%s/TASK.md", dir_path, id);
-    if (!write_entire_file(task_md_path, sb.items, sb.count)) return false;
+    String_Builder sb_md_content = {0};
 
-    const char *cwd_path = get_current_dir_temp();
-    if (!cwd_path) return false;
+    append_task_md_content(&sb_md_content, task);
+    const char *task_md_path = temp_sprintf("%s/%s/TASK.md", path_render_cstr(&sb_dir_path, dir_path), id);
+    if (!write_entire_file(task_md_path, sb_md_content.items, sb_md_content.count)) return false;
 
-    const char *rel_path = relative_path(dir_path, cwd_path);
-
-    print_task(rel_path, &task);
+    String_Builder sb_rel_path = {0};
+    print_task(path_render_cstr(&sb_rel_path, rel_path), &task);
     return true;
 }
 
@@ -858,24 +823,27 @@ static bool find_run(Command *self, const char *program_name, int argc, char **a
         return false;
     }
 
-    const char *dir_path = find_tasks_database();
-    if (!dir_path) return false;
+    Path dir_path = {0};
+    if (!find_tasks_database(&dir_path)) return false;
 
-    const char *cwd_path = get_current_dir_temp();
-    if (!cwd_path) return false;
+    Path cwd_path = {0};
+    if (!get_current_dir_path(&cwd_path)) return false;
 
-    const char *rel_path = relative_path(dir_path, cwd_path);
+    Path rel_path = {0};
+    path_relative(&rel_path, cwd_path, dir_path);
+
+    String_Builder sb_path = {0};
 
     Tasks tasks = {0};
-    if (!load_tasks(&tasks, dir_path)) return false;
+    if (!load_tasks(&tasks, path_render_cstr(&sb_path, dir_path))) return false;
 
     bool found = false;
     da_foreach(Task, task, &tasks) {
         if (strcmp(task->id, huid) == 0) {
             if (path_only) {
-                printf("%s/%s/TASK.md\n", rel_path, task->id);
+                printf("%s/%s/TASK.md\n", path_render_cstr(&sb_path, rel_path), task->id);
             } else {
-                print_task(rel_path, task);
+                print_task(path_render_cstr(&sb_path, rel_path), task);
             }
             found = true;
         }
@@ -894,11 +862,13 @@ static bool graph_run(Command *self, const char *program_name, int argc, char **
     UNUSED(argc);
     UNUSED(argv);
 
-    const char *dir_path = find_tasks_database();
-    if (!dir_path) return false;
+    Path dir_path = {0};
+    if (!find_tasks_database(&dir_path)) return false;
+
+    String_Builder sb_path = {0};
 
     Tasks tasks = {0};
-    if (!load_tasks(&tasks, dir_path)) return false;
+    if (!load_tasks(&tasks, path_render_cstr(&sb_path, dir_path))) return false;
 
     typedef Ht(String_View, bool) HUIDs;
     Ht(const char *, HUIDs) graph = {
@@ -985,15 +955,18 @@ static bool summary_run(Command *self, const char *program_name, int argc, char 
         return true;
     }
 
-    const char *dir_path = find_tasks_database();
-    if (!dir_path) return false;
+    String_Builder sb_path = {0};
+
+    Path dir_path = {0};
+    if (!find_tasks_database(&dir_path)) return false;
+
     Tasks tasks = {0};
-    if (!load_tasks(&tasks, dir_path)) return false;
+    if (!load_tasks(&tasks, path_render_cstr(&sb_path, dir_path))) return false;
 
     Ht(String_View, String_View) tags_desc = {
         .hasheq = ht_sv_hasheq,
     };
-    const char *tags_desc_path = temp_sprintf("%s/tags", dir_path);
+    const char *tags_desc_path = temp_sprintf("%s/tags", path_render_cstr(&sb_path, dir_path));
     if (file_exists(tags_desc_path)) {
         String_Builder sb = {0};
         if (!read_entire_file(tags_desc_path, &sb)) return false;
@@ -1218,7 +1191,7 @@ int main(int argc, char **argv)
             .description = "Completely different path",
             .dst_path = "/home/rexim/Programming/tsoding/sofren/tasks",
             .src_path = "/home_/rexim/Programming/tsoding/sofren/tasks",
-            .rel_path = "../../../../../../rexim/Programming/tsoding/sofren/tasks",
+            .rel_path = "../../../../../../home/rexim/Programming/tsoding/sofren/tasks",
         },
         {
             .description = "20260321-181305",
@@ -1228,23 +1201,28 @@ int main(int argc, char **argv)
         },
     };
 
+    Path dst_path          = {0};
+    Path src_path          = {0};
+    Path rel_path_expected = {0};
+    Path rel_path_actual   = {0};
+    String_Builder sb_path = {0};
     bool record = false;
     if (!record) {
         // Replay
         for (size_t i = 0; i < ARRAY_LEN(cases); ++i) {
-            const char *dst_path    = cases[i].dst_path;
-            const char *src_path    = cases[i].src_path;
             const char *description = cases[i].description;
-            const char *rel_path    = cases[i].rel_path;
+            path_parse(&dst_path,          sv_from_cstr(cases[i].dst_path));
+            path_parse(&src_path,          sv_from_cstr(cases[i].src_path));
+            path_parse(&rel_path_expected, sv_from_cstr(cases[i].rel_path));
             printf("%s ...", description);
             fflush(stdout);
-            const char *outcome = relative_path(dst_path, src_path);
-            if (strcmp(outcome, rel_path) == 0) {
+            path_relative(&rel_path_actual, src_path, dst_path);
+            if (path_eq(rel_path_actual, rel_path_expected)) {
                 printf(" OK\n");
             } else {
                 printf(" FAILED\n");
-                printf("  EXPECTED: %s\n", rel_path);
-                printf("  ACTUAL:   %s\n", outcome);
+                printf("  EXPECTED: %s\n", path_render_cstr(&sb_path, rel_path_expected));
+                printf("  ACTUAL:   %s\n", path_render_cstr(&sb_path, rel_path_actual));
                 abort();
             }
         }
@@ -1252,20 +1230,28 @@ int main(int argc, char **argv)
         // Record
         printf("{\n");
         for (size_t i = 0; i < ARRAY_LEN(cases); ++i) {
-            const char *dst_path    = cases[i].dst_path;
-            const char *src_path    = cases[i].src_path;
             const char *description = cases[i].description;
-            const char *rel_path    = relative_path(dst_path, src_path);
+            path_parse(&dst_path, sv_from_cstr(cases[i].dst_path));
+            path_parse(&src_path, sv_from_cstr(cases[i].src_path));
+            path_relative(&rel_path_actual, src_path, dst_path);
             printf("    {\n");
             printf("        .description = \"%s\",\n", description);
-            printf("        .dst_path    = \"%s\",\n", dst_path);
-            printf("        .src_path    = \"%s\",\n", src_path);
-            printf("        .rel_path    = \"%s\",\n", rel_path);
+            printf("        .dst_path    = \"%s\",\n", path_render_cstr(&sb_path, dst_path));
+            printf("        .src_path    = \"%s\",\n", path_render_cstr(&sb_path, src_path));
+            printf("        .rel_path    = \"%s\",\n", path_render_cstr(&sb_path, rel_path_actual));
             printf("    },\n");
         }
         printf("}\n");
     }
     return 0;
-
 }
 #endif // TASKS_TEST
+
+#define NOB_IMPLEMENTATION
+#include "nob.h"
+#define FLAG_IMPLEMENTATION
+#define FLAG_PUSH_DASH_DASH_BACK
+#include "flag.h"
+#define HT_IMPLEMENTATION
+#include "ht.h"
+#include "path.c"

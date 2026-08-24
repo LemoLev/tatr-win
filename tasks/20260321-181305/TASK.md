@@ -1,8 +1,8 @@
 # `tatr ls` relative paths are broken
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 120
-- TAGS: bug
+- TAGS: bug,release
 
 Repro:
 
