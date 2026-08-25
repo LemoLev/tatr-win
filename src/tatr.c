@@ -240,21 +240,26 @@ static bool get_current_dir_path(Path *cwd_path)
 
 static bool find_tasks_database(Path *dir_path)
 {
+    bool result = false;
     String_Builder sb_path = {0};
-    if (!get_current_dir_path(dir_path)) return false;
-    assert(dir_path->count > 0 && sv_eq(dir_path->items[0], SVLIT("")));
+
+    if (!get_current_dir_path(dir_path)) return_defer(false);
+    assert(dir_path->count > 0 && sv_eq(dir_path->items[0], SVLIT("")) && "CWD must be absolute");
     while (dir_path->count > 1) {
         da_append(dir_path, SVLIT("tasks"));
         const char *path = path_render_cstr(&sb_path, *dir_path);
         if (file_exists(path)) {
             File_Type type = get_file_type(path);
-            if (type < 0) return false;
-            if (type == FILE_DIRECTORY) return true;
+            if (type < 0) return_defer(false);
+            if (type == FILE_DIRECTORY) return_defer(true);
         }
         dir_path->count -= 2;
     }
     nob_log(ERROR, "Could not find tasks/ folder");
-    return false;
+    return_defer(false);
+defer:
+    free(sb_path.items);
+    return result;
 }
 
 static bool load_tasks(Tasks *tasks, const char *dir_path)
