@@ -1,0 +1,37 @@
+#ifndef TASK_H_
+#define TASK_H_
+
+typedef struct {
+    String_View *items;
+    size_t count;
+    size_t capacity;
+} Tags;
+
+bool tags_contains(Tags tags, String_View tag);
+
+typedef struct {
+    char *id;
+    String_View title;
+    String_View status;
+    Tags tags;
+    int priority;
+    String_View task_md_content;
+} Task;
+
+void print_task(const char *rel_path, Task *task);
+void append_task_md_content(String_Builder *sb, Task task);
+
+// TASK(20260308-163429): Tasks array should be a hash table
+typedef struct {
+    Task *items;
+    size_t count;
+    size_t capacity;
+} Tasks;
+
+bool load_tasks(Tasks *tasks, const char *dir_path);
+
+typedef int (*Task_Compare)(const void *a, const void *b);
+
+Task_Compare task_sorter(bool by_id, bool ascending);
+
+#endif // TASK_H_
