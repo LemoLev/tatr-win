@@ -125,7 +125,7 @@ bool test_ls_filter_report_error_utf8(Test_Runner *r)
 
 void cc(Cmd *cmd)
 {
-    cmd_append(cmd, "cc");
+    cmd_append(cmd, "clang");
     cmd_append(cmd, "-Wall");
     cmd_append(cmd, "-Wextra");
     cmd_append(cmd, "-Wswitch-enum");
@@ -134,6 +134,7 @@ void cc(Cmd *cmd)
     cmd_append(cmd, "-I"THIRDPARTY_FOLDER);
     cmd_append(cmd, "-I"BUILD_FOLDER);
     cmd_append(cmd, "-ggdb");
+    cmd_append(cmd, "-fsanitize=memory");
 }
 
 const char *get_current_date(void)

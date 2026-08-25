@@ -180,7 +180,7 @@ bool tags_contains(Tags tags, String_View tag)
 }
 
 typedef struct {
-    const char *id;
+    char *id;
     String_View title;
     String_View status;
     Tags tags;
@@ -264,41 +264,46 @@ defer:
 
 static bool load_tasks(Tasks *tasks, const char *dir_path)
 {
+    bool result = true;
     File_Paths children = {0};
-    String_Builder sb = {0};
-    Md md = {0};
 
-    if (!read_entire_dir(dir_path, &children)) return false;
+    if (!read_entire_dir(dir_path, &children)) return_defer(false);
+    size_t checkpoint = temp_save();
     for (size_t i = 0; i < children.count; ++i) {
+        temp_rewind(checkpoint);
         const char *id = children.items[i];
         if (*id == '.') continue;
         if (!is_valid_huid(id)) continue;
         const char *task_path = temp_sprintf("%s/%s", dir_path, id);
         File_Type type = get_file_type(task_path);
-        if (type < 0) return false;
+        if (type < 0) return_defer(false);
         if (type != FILE_DIRECTORY) {
             nob_log(ERROR, "%s is not a directory", id);
-            return false;
+            return_defer(false);
         }
-        memset(&sb, 0, sizeof(sb));
+        // This String_Builder becomes owned by Task.task_md_content.
+        // So no memory deallocation is needed for it in here.
+        String_Builder sb_content = {0};
         const char *task_md_path = temp_sprintf("%s/%s/TASK.md", dir_path, id);
         // TASK(20260308-171346): there should be a command that reports all the skipped weird folders and files found in the tasks/ folder
         if (!file_exists(task_md_path)) continue; // Ignore task folders without TASK.md
-        if (!read_entire_file(task_md_path, &sb)) return false;
-        sb_append_null(&sb);
-        md_init(&md, (char*)task_md_path, sb.items);
+        if (!read_entire_file(task_md_path, &sb_content)) return_defer(false);
+        sb_append_null(&sb_content);
+
+        Md md = {0};
+        md_init(&md, (char*)task_md_path, sb_content.items);
 
         String_View title = {0};
-        if (!task_md_extract_title(&md, &title)) return false;
+        if (!task_md_extract_title(&md, &title)) return_defer(false);
         String_View status = {0};
-        if (!task_md_extract_field(&md, "STATUS", &status)) return false;
+        if (!task_md_extract_field(&md, "STATUS", &status)) return_defer(false);
         String_View priority = {0};
-        if (!task_md_extract_field(&md, "PRIORITY", &priority)) return false;
+        if (!task_md_extract_field(&md, "PRIORITY", &priority)) return_defer(false);
         Tags tags = {0};
         md_trim_spaces(&md);
         if (md_char(&md) == '-') {
             String_View sv = {0};
-            if (!task_md_extract_field(&md, "TAGS", &sv)) return false;
+            if (!task_md_extract_field(&md, "TAGS", &sv)) return_defer(false);
             sv = sv_trim_left(sv);
             while (sv.count > 0) {
                 String_View tag = sv_trim(sv_chop_by_delim(&sv, ','));
@@ -313,11 +318,13 @@ static bool load_tasks(Tasks *tasks, const char *dir_path)
             .status          = status,
             .priority        = atoi(temp_sv_to_cstr(priority)),
             .tags            = tags,
-            .task_md_content = sb_to_sv(sb),
+            .task_md_content = sb_to_sv(sb_content),
         }));
     }
 
-    return true;
+defer:
+    free(children.items);
+    return result;
 }
 
 typedef int (*Task_Compare)(const void *a, const void *b);
@@ -740,7 +747,7 @@ static bool new_run(Command *self, const char *program_name, int argc, char **ar
     time_t rawtime;
     time(&rawtime);
     struct tm * timeinfo = gmtime(&rawtime);
-    const char *id = temp_sprintf("%04d%02d%02d-%02d%02d%02d",
+    char *id = temp_sprintf("%04d%02d%02d-%02d%02d%02d",
         timeinfo->tm_year+1900,
         timeinfo->tm_mon+1,
         timeinfo->tm_mday,
@@ -1272,6 +1279,7 @@ int main(int argc, char **argv)
 #endif // TASKS_TEST
 
 #define NOB_IMPLEMENTATION
+#define NOB_OVERWRITE_TEMP_ON_REWIND
 #include "nob.h"
 #define FLAG_IMPLEMENTATION
 #define FLAG_PUSH_DASH_DASH_BACK
