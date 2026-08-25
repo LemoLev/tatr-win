@@ -32,7 +32,7 @@ void path_render(String_Builder *sb, Path path)
     }
 }
 
-const char *path_render_cstr(String_Builder *sb, Path path)
+char *path_render_cstr(String_Builder *sb, Path path)
 {
     path_render(sb, path);
     sb_append_null(sb);

@@ -13,7 +13,7 @@
 #define DEFAULT_TASK_TITLE "New Task"
 #define DEFAULT_PRIORITY 100
 
-static bool get_current_dir_path(Path *cwd_path)
+bool get_current_dir_path(Path *cwd_path)
 {
     const char *cwd_path_cstr = get_current_dir_temp();
     if (!cwd_path_cstr) return false;
@@ -21,7 +21,7 @@ static bool get_current_dir_path(Path *cwd_path)
     return true;
 }
 
-static bool find_tasks_database(Path *dir_path)
+bool find_tasks_database(Path *dir_path)
 {
     bool result = false;
     String_Builder sb_path = {0};
@@ -45,6 +45,28 @@ defer:
     return result;
 }
 
+char *find_relative_tasks_directory(void)
+{
+    char *result = NULL;
+
+    Path dir_path = {0};
+    Path cwd_path = {0};
+    Path rel_path = {0};
+    String_Builder sb_path = {0};
+
+    if (!find_tasks_database(&dir_path))  return_defer(NULL);
+    if (!get_current_dir_path(&cwd_path)) return_defer(NULL);
+    path_relative(&rel_path, cwd_path, dir_path);
+
+    return_defer(path_render_cstr(&sb_path, rel_path));
+
+defer:
+    free(dir_path.items);
+    free(cwd_path.items);
+    free(rel_path.items);
+    return result;
+}
+
 typedef struct Command Command;
 
 struct Command {
@@ -54,14 +76,14 @@ struct Command {
     bool (*run)(Command *self, const char *program_name, int argc, char **argv);
 };
 
-static void print_command_usage(Command *command, const char *program_name, void *c)
+void print_command_usage(Command *command, const char *program_name, void *c)
 {
     fprintf(stderr, "Usage: %s %s %s\n", program_name, command->name, command->signature);
     fprintf(stderr, "OPTIONS:\n");
     flag_c_print_options(c, stderr);
 }
 
-static bool init_run(Command *self, const char *program_name, int argc, char **argv)
+bool init_run(Command *self, const char *program_name, int argc, char **argv)
 {
     UNUSED(self);
     UNUSED(program_name);
@@ -71,7 +93,7 @@ static bool init_run(Command *self, const char *program_name, int argc, char **a
     return true;
 }
 
-static bool ls_run(Command *self, const char *program_name, int argc, char **argv)
+bool ls_run(Command *self, const char *program_name, int argc, char **argv)
 {
     bool closed = false;
     bool ascending = false;
@@ -121,19 +143,11 @@ static bool ls_run(Command *self, const char *program_name, int argc, char **arg
         return true;
     }
 
-    Path dir_path = {0};
-    if (!find_tasks_database(&dir_path)) return false;
-
-    Path cwd_path = {0};
-    if (!get_current_dir_path(&cwd_path)) return false;
-
-    Path rel_path = {0};
-    path_relative(&rel_path, cwd_path, dir_path);
-
-    String_Builder sb = {0};
+    char *dir_path = find_relative_tasks_directory();
+    if (!dir_path) return false;
 
     Tasks tasks = {0};
-    if (!load_tasks(&tasks, path_render_cstr(&sb, dir_path))) return false;
+    if (!load_tasks(&tasks, dir_path)) return false;
     qsort(tasks.items, tasks.count, sizeof(*tasks.items), task_sorter(by_id, ascending));
 
     Stack stack = {0};
@@ -142,7 +156,7 @@ static bool ls_run(Command *self, const char *program_name, int argc, char **arg
     da_foreach(Task, task, &tasks) {
         if (!sv_eq(task->status, closed ? SVLIT("CLOSED") : SVLIT("OPEN"))) continue;
         if (!task_matches_filter(task, filter, &stack)) continue;
-        print_task(path_render_cstr(&sb, rel_path), task);
+        print_task(dir_path, task);
         tasks_matched += 1;
     }
 
@@ -153,7 +167,7 @@ static bool ls_run(Command *self, const char *program_name, int argc, char **arg
     return true;
 }
 
-static bool new_run(Command *self, const char *program_name, int argc, char **argv)
+bool new_run(Command *self, const char *program_name, int argc, char **argv)
 {
     Flag_List tags = {0};
     bool help = false;
@@ -186,19 +200,11 @@ static bool new_run(Command *self, const char *program_name, int argc, char **ar
         return true;
     }
 
-    String_Builder sb_dir_path = {0};
-
-    Path dir_path = {0};
-    if (!find_tasks_database(&dir_path)) return false;
-
-    Path cwd_path = {0};
-    if (!get_current_dir_path(&cwd_path)) return false;
-
-    Path rel_path = {0};
-    path_relative(&rel_path, cwd_path, dir_path);
+    char *dir_path = find_relative_tasks_directory();
+    if (!dir_path) return false;
 
     char *id = temp_new_huid();
-    const char *task_path = temp_sprintf("%s/%s", path_render_cstr(&sb_dir_path, dir_path), id);
+    const char *task_path = temp_sprintf("%s/%s", dir_path, id);
     int exists = file_exists(task_path);
     if (exists < 0) return false;
     if (exists) {
@@ -225,15 +231,14 @@ static bool new_run(Command *self, const char *program_name, int argc, char **ar
     String_Builder sb_md_content = {0};
 
     append_task_md_content(&sb_md_content, task);
-    const char *task_md_path = temp_sprintf("%s/%s/TASK.md", path_render_cstr(&sb_dir_path, dir_path), id);
+    const char *task_md_path = temp_sprintf("%s/%s/TASK.md", dir_path, id);
     if (!write_entire_file(task_md_path, sb_md_content.items, sb_md_content.count)) return false;
 
-    String_Builder sb_rel_path = {0};
-    print_task(path_render_cstr(&sb_rel_path, rel_path), &task);
+    print_task(dir_path, &task);
     return true;
 }
 
-static bool find_run(Command *self, const char *program_name, int argc, char **argv)
+bool find_run(Command *self, const char *program_name, int argc, char **argv)
 {
     bool help = false;
     bool path_only = false;
@@ -281,27 +286,19 @@ static bool find_run(Command *self, const char *program_name, int argc, char **a
         return false;
     }
 
-    Path dir_path = {0};
-    if (!find_tasks_database(&dir_path)) return false;
-
-    Path cwd_path = {0};
-    if (!get_current_dir_path(&cwd_path)) return false;
-
-    Path rel_path = {0};
-    path_relative(&rel_path, cwd_path, dir_path);
-
-    String_Builder sb_path = {0};
+    char *dir_path = find_relative_tasks_directory();
+    if (!dir_path) return false;
 
     Tasks tasks = {0};
-    if (!load_tasks(&tasks, path_render_cstr(&sb_path, dir_path))) return false;
+    if (!load_tasks(&tasks, dir_path)) return false;
 
     bool found = false;
     da_foreach(Task, task, &tasks) {
         if (strcmp(task->id, huid) == 0) {
             if (path_only) {
-                printf("%s/%s/TASK.md\n", path_render_cstr(&sb_path, rel_path), task->id);
+                printf("%s/%s/TASK.md\n", dir_path, task->id);
             } else {
-                print_task(path_render_cstr(&sb_path, rel_path), task);
+                print_task(dir_path, task);
             }
             found = true;
         }
@@ -313,20 +310,18 @@ static bool find_run(Command *self, const char *program_name, int argc, char **a
     return true;
 }
 
-static bool graph_run(Command *self, const char *program_name, int argc, char **argv)
+bool graph_run(Command *self, const char *program_name, int argc, char **argv)
 {
     UNUSED(self);
     UNUSED(program_name);
     UNUSED(argc);
     UNUSED(argv);
 
-    Path dir_path = {0};
-    if (!find_tasks_database(&dir_path)) return false;
-
-    String_Builder sb_path = {0};
+    char *dir_path = find_relative_tasks_directory();
+    if (!dir_path) return false;
 
     Tasks tasks = {0};
-    if (!load_tasks(&tasks, path_render_cstr(&sb_path, dir_path))) return false;
+    if (!load_tasks(&tasks, dir_path)) return false;
 
     typedef Ht(String_View, bool) HUIDs;
     Ht(const char *, HUIDs) graph = {
@@ -394,7 +389,7 @@ int tag_count_compare_by_count_desc(const void *a, const void *b)
     return 0;
 }
 
-static bool summary_run(Command *self, const char *program_name, int argc, char **argv)
+bool summary_run(Command *self, const char *program_name, int argc, char **argv)
 {
     bool closed = false;
     bool help = false;
@@ -413,18 +408,16 @@ static bool summary_run(Command *self, const char *program_name, int argc, char 
         return true;
     }
 
-    String_Builder sb_path = {0};
-
-    Path dir_path = {0};
-    if (!find_tasks_database(&dir_path)) return false;
+    char *dir_path = find_relative_tasks_directory();
+    if (!dir_path) return false;
 
     Tasks tasks = {0};
-    if (!load_tasks(&tasks, path_render_cstr(&sb_path, dir_path))) return false;
+    if (!load_tasks(&tasks, dir_path)) return false;
 
     Ht(String_View, String_View) tags_desc = {
         .hasheq = ht_sv_hasheq,
     };
-    const char *tags_desc_path = temp_sprintf("%s/tags", path_render_cstr(&sb_path, dir_path));
+    const char *tags_desc_path = temp_sprintf("%s/tags", dir_path);
     if (file_exists(tags_desc_path)) {
         String_Builder sb = {0};
         if (!read_entire_file(tags_desc_path, &sb)) return false;
@@ -506,9 +499,9 @@ static bool summary_run(Command *self, const char *program_name, int argc, char 
     return true;
 }
 
-static bool help_run(Command *self, const char *program_name, int argc, char **argv);
+bool help_run(Command *self, const char *program_name, int argc, char **argv);
 
-static bool version_run(Command *self, const char *program_name, int argc, char **argv)
+bool version_run(Command *self, const char *program_name, int argc, char **argv)
 {
     UNUSED(self);
     UNUSED(program_name);
@@ -520,7 +513,7 @@ static bool version_run(Command *self, const char *program_name, int argc, char 
     return true;
 }
 
-static Command commands[] = {
+Command commands[] = {
     {
         .name = "init",
         .description = "Create tasks/ directory in the current working directory if it doesn't exist yet",
@@ -568,7 +561,7 @@ static Command commands[] = {
     },
 };
 
-static void print_available_commands(Log_Level log_level)
+void print_available_commands(Log_Level log_level)
 {
     nob_log(log_level, "Available commands:");
     int max_width = 0;
@@ -581,7 +574,7 @@ static void print_available_commands(Log_Level log_level)
     }
 }
 
-static bool help_run(Command *self, const char *program_name, int argc, char **argv)
+bool help_run(Command *self, const char *program_name, int argc, char **argv)
 {
     UNUSED(self);
     UNUSED(program_name);

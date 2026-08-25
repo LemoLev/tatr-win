@@ -21,7 +21,7 @@ typedef struct {
 bool path_eq(Path a, Path b);
 void path_normalize(Path *dst, Path src);
 void path_render(String_Builder *sb, Path path);
-const char *path_render_cstr(String_Builder *sb, Path path);
+char *path_render_cstr(String_Builder *sb, Path path);
 void path_parse(Path *path, String_View sv);
 void path_relative(Path *relative, Path current, Path target);
 
