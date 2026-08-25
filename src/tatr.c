@@ -122,45 +122,47 @@ static void md_trim_spaces_except_newline(Md *md)
     }
 }
 
-static char *md_dup_text_until_newline(Md *md)
+static String_View md_chop_until_newline(Md *md)
 {
     char *start = md_cstr(md);
     while (!md_end(md) && md_char(md) != '\n') {
         md_next_char(md);
     }
-    return strndup(start, md_cstr(md) - start);
+    return sv_from_parts(start, md_cstr(md) - start);
 }
 
-static char *task_md_extract_title(Md *md)
+static bool task_md_extract_title(Md *md, String_View *title)
 {
     md_trim_spaces(md);
     if (!md_expect_char(md, '#')) {
         fprintf(stderr, "%s:%zu:%zu: ERROR: expected '#' as a start of a title, but got %c\n", md->file, md->line, md_col(md), md_char(md));
-        return NULL;
+        return false;
     }
     md_trim_spaces_except_newline(md);
-    return md_dup_text_until_newline(md);
+    *title = md_chop_until_newline(md);
+    return true;
 }
 
-static char *task_md_extract_field(Md *md, char *field)
+static bool task_md_extract_field(Md *md, char *field, String_View *value)
 {
     md_trim_spaces(md);
     if (!md_expect_char(md, '-')) {
         fprintf(stderr, "%s:%zu:%zu: ERROR: expected '-' as a start of a TASK.md field '%s', but got %c\n", md->file, md->line, md_col(md), field, md_char(md));
-        return NULL;
+        return false;
     }
     md_trim_spaces_except_newline(md);
     if (!md_expect_str(md, field)) {
         fprintf(stderr, "%s:%zu:%zu: ERROR: expected a TASK.md field name '%s'\n", md->file, md->line, md_col(md), field);
-        return NULL;
+        return false;
     }
     md_trim_spaces_except_newline(md);
     if (!md_expect_char(md, ':')) {
         fprintf(stderr, "%s:%zu:%zu: ERROR: expected a field separator ':'\n", md->file, md->line, md_col(md));
-        return NULL;
+        return false;
     }
     md_trim_spaces_except_newline(md);
-    return md_dup_text_until_newline(md);
+    *value = md_chop_until_newline(md);
+    return true;
 }
 
 typedef struct {
@@ -179,9 +181,8 @@ bool tags_contains(Tags tags, String_View tag)
 
 typedef struct {
     const char *id;
-    // TASK(20260322-204811): use String_View for Task.title and Task.status that refer to the TASK.md content
-    const char *title;
-    const char *status;
+    String_View title;
+    String_View status;
     Tags tags;
     int priority;
     String_View task_md_content;
@@ -189,9 +190,9 @@ typedef struct {
 
 static void append_task_md_content(String_Builder *sb, Task task)
 {
-    sb_appendf(sb, "# %s\n", task.title);
+    sb_appendf(sb, "# "SV_Fmt"\n", SV_Arg(task.title));
     sb_appendf(sb, "\n");
-    sb_appendf(sb, "- STATUS: %s\n", task.status);
+    sb_appendf(sb, "- STATUS: "SV_Fmt"\n", SV_Arg(task.status));
     sb_appendf(sb, "- PRIORITY: %d\n", task.priority);
     if (task.tags.count > 0) {
         sb_appendf(sb, "- TAGS: ");
@@ -222,9 +223,9 @@ static void print_task(const char *rel_path, Task *task)
             sb_appendf(&sb, SV_Fmt, SV_Arg(task->tags.items[i]));
         }
         sb_append_null(&sb);
-        printf("%s/%s/TASK.md:1: [PRIORITY: %-3d, TAGS: %s] %s\n", rel_path, task->id, task->priority, sb.items, task->title);
+        printf("%s/%s/TASK.md:1: [PRIORITY: %-3d, TAGS: %s] "SV_Fmt"\n", rel_path, task->id, task->priority, sb.items, SV_Arg(task->title));
     } else {
-        printf("%s/%s/TASK.md:1: [PRIORITY: %-3d] %s\n", rel_path, task->id, task->priority, task->title);
+        printf("%s/%s/TASK.md:1: [PRIORITY: %-3d] "SV_Fmt"\n", rel_path, task->id, task->priority, SV_Arg(task->title));
     }
 }
 
@@ -281,18 +282,18 @@ static bool load_tasks(Tasks *tasks, const char *dir_path)
         sb_append_null(&sb);
         md_init(&md, (char*)task_md_path, sb.items);
 
-        char *title = task_md_extract_title(&md);
-        if (title == NULL) return false;
-        char *status = task_md_extract_field(&md, "STATUS");
-        if (status == NULL) return false;
-        char *priority = task_md_extract_field(&md, "PRIORITY");
-        if (priority == NULL) return false;
+        String_View title = {0};
+        if (!task_md_extract_title(&md, &title)) return false;
+        String_View status = {0};
+        if (!task_md_extract_field(&md, "STATUS", &status)) return false;
+        String_View priority = {0};
+        if (!task_md_extract_field(&md, "PRIORITY", &priority)) return false;
         Tags tags = {0};
         md_trim_spaces(&md);
         if (md_char(&md) == '-') {
-            char *tags_string = task_md_extract_field(&md, "TAGS");
-            if (tags_string == NULL) return false;
-            String_View sv = sv_trim_left(sv_from_cstr(tags_string));
+            String_View sv = {0};
+            if (!task_md_extract_field(&md, "TAGS", &sv)) return false;
+            sv = sv_trim_left(sv);
             while (sv.count > 0) {
                 String_View tag = sv_trim(sv_chop_by_delim(&sv, ','));
                 da_append(&tags, tag);
@@ -304,7 +305,7 @@ static bool load_tasks(Tasks *tasks, const char *dir_path)
             .id              = strdup(id),
             .title           = title,
             .status          = status,
-            .priority        = atoi(priority),
+            .priority        = atoi(temp_sv_to_cstr(priority)),
             .tags            = tags,
             .task_md_content = sb_to_sv(sb),
         }));
@@ -673,7 +674,7 @@ static bool ls_run(Command *self, const char *program_name, int argc, char **arg
 
     size_t tasks_matched = 0;
     da_foreach(Task, task, &tasks) {
-        if (strcmp(task->status, closed ? "CLOSED" : "OPEN") != 0) continue;
+        if (!sv_eq(task->status, closed ? SVLIT("CLOSED") : SVLIT("OPEN"))) continue;
         if (!task_matches_filter(task, filter, &stack)) continue;
         print_task(path_render_cstr(&sb, rel_path), task);
         tasks_matched += 1;
@@ -748,16 +749,15 @@ static bool new_run(Command *self, const char *program_name, int argc, char **ar
         return false;
     }
     if (!mkdir_if_not_exists(task_path)) return false;
-    const char *title = DEFAULT_TASK_TITLE;
+    String_View title = SVLIT(DEFAULT_TASK_TITLE);
     if (sb_title.count > 0) {
-        sb_append_null(&sb_title);
-        title = sb_title.items;
+        title = sb_to_sv(sb_title);
     }
 
     Task task = {
         .id       = id,
         .title    = title,
-        .status   = "OPEN",
+        .status   = SVLIT("OPEN"),
         .priority = priority,
     };
 
@@ -994,7 +994,7 @@ static bool summary_run(Command *self, const char *program_name, int argc, char 
     };
     for (size_t i = 0; i < tasks.count; ++i) {
         Task *task = &tasks.items[i];
-        bool task_is_closed = strcmp(task->status, "CLOSED") == 0;
+        bool task_is_closed = sv_eq(task->status, SVLIT("CLOSED"));
         if (closed == task_is_closed) {
             total_count += 1;
             for (size_t j = 0; j < task->tags.count; ++j) {
