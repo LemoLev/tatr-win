@@ -138,7 +138,7 @@ void cc(Cmd *cmd)
     cmd_append(cmd, "-ggdb");
 }
 
-const char *get_current_date_rfc822(void)
+const char *get_current_date(void)
 {
     static const char *WEEKDAYS[] = {
         "Mon", "Tue", "Wed",
@@ -165,10 +165,7 @@ const char *get_current_date_rfc822(void)
     sb_appendf(&sb, "%02d:", timeinfo->tm_hour);
     sb_appendf(&sb, "%02d:", timeinfo->tm_min);
     sb_appendf(&sb, "%02d ", timeinfo->tm_sec);
-    const char *zone = timeinfo->tm_zone;
-    assert(strlen(zone) == 3);
-    sb_append_cstr(&sb, zone);
-    sb_append_cstr(&sb, "00");
+    sb_appendf(&sb, "%s",    timeinfo->tm_zone);
     sb_append_null(&sb);
     return sb.items;
 }
@@ -220,7 +217,7 @@ int main(int argc, char **argv)
     sb_appendf(&sb_git_hash, "\"\n");
 
 
-    sb_appendf(&sb_git_hash, "#define BUILD_TIME \"%s\"\n", get_current_date_rfc822());
+    sb_appendf(&sb_git_hash, "#define BUILD_TIME \"%s\"\n", get_current_date());
     sb_appendf(&sb_git_hash, "#endif // GIT_HASH_H_\n");
     if (!write_entire_file(BUILD_FOLDER"git_hash.h", sb_git_hash.items, sb_git_hash.count)) return 1;
 
