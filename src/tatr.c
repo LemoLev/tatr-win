@@ -8,7 +8,7 @@
 #include "md.h"
 #include "filter.h"
 #include "task.h"
-#include "git_hash.h"
+#include "build.h"
 
 #define DEFAULT_TASK_TITLE "New Task"
 #define DEFAULT_PRIORITY 100

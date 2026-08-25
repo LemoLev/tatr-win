@@ -205,20 +205,20 @@ int main(int argc, char **argv)
     cmd_append(&cmd, "HEAD");
     if (!cmd_run(&cmd, .stdout_path = BUILD_FOLDER"git_hash.txt")) return 1;
 
-    String_Builder sb_git_hash = {0};
-    sb_appendf(&sb_git_hash, "#ifndef GIT_HASH_H_\n");
-    sb_appendf(&sb_git_hash, "#define GIT_HASH_H_\n");
-    sb_appendf(&sb_git_hash, "#define GIT_HASH \"");
-    if (!read_entire_file(BUILD_FOLDER"git_hash.txt", &sb_git_hash)) return 1;
-    while (sb_git_hash.count > 0 && isspace(da_last(&sb_git_hash))) {
-        da_pop(&sb_git_hash);
+    String_Builder sb_build_h = {0};
+    sb_appendf(&sb_build_h, "#ifndef BUILD_H_\n");
+    sb_appendf(&sb_build_h, "#define BUILD_H_\n");
+    sb_appendf(&sb_build_h, "#define GIT_HASH \"");
+    if (!read_entire_file(BUILD_FOLDER"git_hash.txt", &sb_build_h)) return 1;
+    while (sb_build_h.count > 0 && isspace(da_last(&sb_build_h))) {
+        da_pop(&sb_build_h);
     }
-    sb_appendf(&sb_git_hash, "\"\n");
+    sb_appendf(&sb_build_h, "\"\n");
 
 
-    sb_appendf(&sb_git_hash, "#define BUILD_TIME \"%s\"\n", get_current_date());
-    sb_appendf(&sb_git_hash, "#endif // GIT_HASH_H_\n");
-    if (!write_entire_file(BUILD_FOLDER"git_hash.h", sb_git_hash.items, sb_git_hash.count)) return 1;
+    sb_appendf(&sb_build_h, "#define BUILD_TIME \"%s\"\n", get_current_date());
+    sb_appendf(&sb_build_h, "#endif // BUILD_H_\n");
+    if (!write_entire_file(BUILD_FOLDER"build.h", sb_build_h.items, sb_build_h.count)) return 1;
 
     cc(&cmd);
     cmd_append(&cmd, "-o", BUILD_FOLDER"tatr");
