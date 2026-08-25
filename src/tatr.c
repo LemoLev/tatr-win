@@ -1171,6 +1171,7 @@ int main(int argc, char **argv)
     return 1;
 }
 #else
+// TASK(20260825-195942): Move the relative path test into a separate unit
 int main(int argc, char **argv)
 {
     UNUSED(argc);

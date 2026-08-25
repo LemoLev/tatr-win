@@ -77,6 +77,7 @@ void path_relative(Path *rel, Path src, Path dst)
     }
 }
 
+// TASK(20260825-195942): Move the relative path test into a separate unit
 static void test_path(void)
 {
     printf("------------------------------\n");

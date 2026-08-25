@@ -1,8 +1,8 @@
 # Memory management is a bit messy
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 100
-- TAGS: release,scope
+- TAGS: release
 
 It is currently fine as long as this program is a batch program. But
 we have a task for potentially adding a Web interface
@@ -20,8 +20,14 @@ about this.
 
 ---
 
-Things to check
-- [ ] `String_Builder`
-- [ ] `read_entire_file`
-- [ ] `read_entire_dir`
-- [ ] `str*dup`
+Things to check:
+- [x] `String_Builder`
+- [x] `read_entire_file`
+- [x] `read_entire_dir`
+- [x] `str*dup`
+
+---
+
+The `*_run` functions should probably not be that disciplined about
+memory because they are designed to interface the batch interface of
+the program.
