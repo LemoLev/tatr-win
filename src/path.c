@@ -5,13 +5,13 @@
 
 void path_normalize(Path *dst, Path src)
 {
-    // TODO: double check with python path normalization implementation
+    // TASK(20260825-162925): double check with python that path_normalize is implemented correctly
     for (size_t i = 0; i < src.count; ++i) {
         String_View sv = src.items[i];
         if (sv_eq(sv, sv_from_cstr("")) && i > 0) continue;
         if (sv_eq(sv, sv_from_cstr("."))) continue;
         if (sv_eq(sv, sv_from_cstr(".."))) {
-            if (dst->count > 0) da_pop(dst);
+            if (dst->count > 0) UNUSED(da_pop(dst));
             continue;
         }
         da_append(dst, sv);
