@@ -4,166 +4,12 @@
 #include "ht.h"
 
 #include "path.h"
+#include "huid.h"
+#include "md.h"
 #include "git_hash.h"
 
 #define DEFAULT_TASK_TITLE "New Task"
 #define DEFAULT_PRIORITY 100
-
-bool chop_huid(String_View *content, String_View *huid)
-{
-    String_View copy = *content;
-    for (size_t i = 0; copy.count > 0 && i < 8; ++i) {
-        if (!isdigit(copy.data[0])) return false;
-        sv_chop_left(&copy, 1);
-    }
-    if (!sv_eq(sv_chop_left(&copy, 1), sv_from_cstr("-"))) {
-        return false;
-    }
-    for (size_t i = 0; copy.count > 0 && i < 6; ++i) {
-        if (!isdigit(copy.data[0])) return false;
-        sv_chop_left(&copy, 1);
-    }
-    huid->data  = content->data;
-    huid->count = copy.data - content->data;
-    *content = copy;
-    return true;
-}
-
-#define HUID_REGEXP_FOR_USER_REPORT_PURPOSES "/[0-9]{8}-[0-9]{6}/"
-static inline bool is_valid_huid(const char *id)
-{
-    for (int i = 0; i < 8; ++i) if (!isdigit(*id++)) return false;
-    if (*id++ != '-')                                return false;
-    for (int i = 0; i < 6; ++i) if (!isdigit(*id++)) return false;
-    if (*id++ != '\0')                               return false;
-    return true;
-}
-
-static inline bool isspace_except_newline(char x)
-{
-    return isspace(x) && x != '\n' && x != '\r';
-}
-
-typedef struct {
-    char *file;
-    char *source;
-    size_t cur, bol, line;
-} Md;
-
-static inline void md_init(Md *md, char *file, char *source)
-{
-    memset(md, 0, sizeof(*md));
-    md->file = file;
-    md->source = source;
-    md->line = 1;
-}
-
-static inline size_t md_col(Md *md)
-{
-    return md->cur - md->bol + 1;
-}
-
-static inline char *md_cstr(Md *md)
-{
-    return &md->source[md->cur];
-}
-
-static inline char md_char(Md *md)
-{
-    return md->source[md->cur];
-}
-
-static inline bool md_end(Md *md)
-{
-    return md_char(md) == '\0';
-}
-
-static char md_next_char(Md *md)
-{
-    if (md_end(md)) return '\0';
-    char x = md->source[md->cur++];
-    if (x == '\n') {
-        md->bol = md->cur;
-        md->line += 1;
-    }
-    return x;
-}
-
-static inline bool md_expect_char(Md *md, char x)
-{
-    if (md_char(md) != x) return false;
-    md_next_char(md);
-    return true;
-}
-
-static bool md_expect_str(Md *md, char *str)
-{
-    size_t saved_cur = md->cur;
-    while (!md_end(md) && *str) {
-        if (md_next_char(md) != *str++) {
-            md->cur = saved_cur;
-            return false;
-        }
-    }
-    return true;
-}
-
-static void md_trim_spaces(Md *md)
-{
-    while (isspace(md_char(md))) {
-        md_next_char(md);
-    }
-}
-
-static void md_trim_spaces_except_newline(Md *md)
-{
-    while (isspace_except_newline(md_char(md))) {
-        md_next_char(md);
-    }
-}
-
-static String_View md_chop_until_newline(Md *md)
-{
-    char *start = md_cstr(md);
-    while (!md_end(md) && md_char(md) != '\n') {
-        md_next_char(md);
-    }
-    return sv_from_parts(start, md_cstr(md) - start);
-}
-
-static bool task_md_extract_title(Md *md, String_View *title)
-{
-    md_trim_spaces(md);
-    if (!md_expect_char(md, '#')) {
-        fprintf(stderr, "%s:%zu:%zu: ERROR: expected '#' as a start of a title, but got %c\n", md->file, md->line, md_col(md), md_char(md));
-        return false;
-    }
-    md_trim_spaces_except_newline(md);
-    *title = md_chop_until_newline(md);
-    return true;
-}
-
-static bool task_md_extract_field(Md *md, char *field, String_View *value)
-{
-    md_trim_spaces(md);
-    if (!md_expect_char(md, '-')) {
-        fprintf(stderr, "%s:%zu:%zu: ERROR: expected '-' as a start of a TASK.md field '%s', but got %c\n", md->file, md->line, md_col(md), field, md_char(md));
-        return false;
-    }
-    md_trim_spaces_except_newline(md);
-    if (!md_expect_str(md, field)) {
-        fprintf(stderr, "%s:%zu:%zu: ERROR: expected a TASK.md field name '%s'\n", md->file, md->line, md_col(md), field);
-        return false;
-    }
-    md_trim_spaces_except_newline(md);
-    if (!md_expect_char(md, ':')) {
-        fprintf(stderr, "%s:%zu:%zu: ERROR: expected a field separator ':'\n", md->file, md->line, md_col(md));
-        return false;
-    }
-    md_trim_spaces_except_newline(md);
-    *value = md_chop_until_newline(md);
-    return true;
-}
 
 typedef struct {
     String_View *items;
@@ -744,16 +590,7 @@ static bool new_run(Command *self, const char *program_name, int argc, char **ar
     Path rel_path = {0};
     path_relative(&rel_path, cwd_path, dir_path);
 
-    time_t rawtime;
-    time(&rawtime);
-    struct tm * timeinfo = gmtime(&rawtime);
-    char *id = temp_sprintf("%04d%02d%02d-%02d%02d%02d",
-        timeinfo->tm_year+1900,
-        timeinfo->tm_mon+1,
-        timeinfo->tm_mday,
-        timeinfo->tm_hour,
-        timeinfo->tm_min,
-        timeinfo->tm_sec);
+    char *id = temp_new_huid();
     const char *task_path = temp_sprintf("%s/%s", path_render_cstr(&sb_dir_path, dir_path), id);
     int exists = file_exists(task_path);
     if (exists < 0) return false;
@@ -1287,4 +1124,7 @@ int main(int argc, char **argv)
 #include "flag.h"
 #define HT_IMPLEMENTATION
 #include "ht.h"
+
 #include "path.c"
+#include "huid.c"
+#include "md.c"
