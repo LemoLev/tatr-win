@@ -2,7 +2,7 @@
 
 - STATUS: OPEN
 - PRIORITY: 100
-- TAGS: release
+- TAGS: release,scope
 
 It is currently fine as long as this program is a batch program. But
 we have a task for potentially adding a Web interface
