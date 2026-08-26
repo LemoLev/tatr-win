@@ -1,5 +1,5 @@
-#ifndef FILTER_H_
-#define FILTER_H_
+#ifndef QUERY_H_
+#define QUERY_H_
 
 #include "task.h"
 
@@ -23,9 +23,9 @@ typedef struct {
     Op *items;
     size_t count;
     size_t capacity;
-} Filter;
+} Query;
 
-bool compile_filter(String_View original_src, String_View *src, Filter *filter);
+bool compile_query(String_View original_src, String_View *src, Query *query);
 
 typedef struct {
     bool *items;
@@ -33,6 +33,6 @@ typedef struct {
     size_t capacity;
 } Stack;
 
-bool task_matches_filter(const Task *task, Filter filter, Stack *stack);
+bool task_matches_query(const Task *task, Query query, Stack *stack);
 
-#endif // FILTER_H_
+#endif // QUERY_H_

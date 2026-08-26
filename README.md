@@ -50,9 +50,9 @@ There might be an optional `tasks/tags` file with the following format:
 
 It serves as a documentation for each existing tag and the thirdparty tools may use it to display the tag descriptions.
 
-# Filter Language
+# Query Language
 
-Filter language is used with `tatr ls` command to select a set of tasks.
+Query language is used with `tatr ls` command to select a set of tasks.
 
 ## Syntax
 
@@ -66,7 +66,7 @@ Here is the [Backus–Naur form](https://en.wikipedia.org/wiki/Backus%E2%80%93Na
 <tag>     ::= '.' 1*<any character except ','>
 ```
 
-You pass the expressions to tatr like this `tatr ls <expr>` and it lists all tasks that match the filter.
+You pass the expressions to tatr like this `tatr ls <expr>` and it lists all tasks that match the query.
 
 ## Examples
 

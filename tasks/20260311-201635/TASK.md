@@ -1,4 +1,4 @@
-# `tatr ls` filter language does not work well with UTF-8
+# `tatr ls` query language does not work well with UTF-8
 
 - STATUS: CLOSED
 - PRIORITY: 100

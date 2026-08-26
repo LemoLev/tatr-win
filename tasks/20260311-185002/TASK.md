@@ -1,4 +1,4 @@
-# Filter "not (tagged or .bug and .test and .foo and .bar)" is not parsed properly
+# Query "not (tagged or .bug and .test and .foo and .bar)" is not parsed properly
 
 - STATUS: CLOSED
 - PRIORITY: 100

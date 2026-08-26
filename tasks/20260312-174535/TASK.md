@@ -1,4 +1,4 @@
-# Document the filter language
+# Document the query language
 
 - STATUS: OPEN
 - PRIORITY: 100

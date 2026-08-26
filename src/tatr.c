@@ -6,7 +6,7 @@
 #include "path.h"
 #include "huid.h"
 #include "md.h"
-#include "filter.h"
+#include "query.h"
 #include "task.h"
 #include "build.h"
 
@@ -100,13 +100,13 @@ bool ls_run(Command *self, const char *program_name, int argc, char **argv)
     bool help = false;
     bool debug = false;
     bool by_id = false;
-    String_Builder filter_src = {0};
+    String_Builder query_src = {0};
 
     void *c = flag_c_new(program_name);
     flag_c_bool_var(c, &closed, "c", false, "List closed tasks");
     flag_c_bool_var(c, &ascending, "a", false, "List tasks in ascending order");
     flag_c_bool_var(c, &by_id, "id", false, "Sort tasks by id");
-    flag_c_bool_var(c, &debug, "debug", false, "Output opcodes of the filter for debug purpose");
+    flag_c_bool_var(c, &debug, "debug", false, "Output opcodes of the query for debug purpose");
     flag_c_bool_var(c, &help, "help", false, "Print this help message");
 
     while (argc > 0) {
@@ -120,8 +120,8 @@ bool ls_run(Command *self, const char *program_name, int argc, char **argv)
         argv = flag_c_rest_argv(c);
 
         if (argc > 0) {
-            if (filter_src.count > 0) sb_append(&filter_src, ' ');
-            sb_append_cstr(&filter_src, shift(argv, argc));
+            if (query_src.count > 0) sb_append(&query_src, ' ');
+            sb_append_cstr(&query_src, shift(argv, argc));
         }
     }
 
@@ -130,14 +130,14 @@ bool ls_run(Command *self, const char *program_name, int argc, char **argv)
         return true;
     }
 
-    String_View src = sv_trim(sb_to_sv(filter_src));
+    String_View src = sv_trim(sb_to_sv(query_src));
     if (src.count == 0) src = sv_from_cstr("any");
     String_View original_src = src;
-    Filter filter = {0};
-    if (!compile_filter(original_src, &src, &filter)) return false;
+    Query query = {0};
+    if (!compile_query(original_src, &src, &query)) return false;
 
     if (debug) {
-        da_foreach(Op, op, &filter) {
+        da_foreach(Op, op, &query) {
             print_op(*op);
         }
         return true;
@@ -155,7 +155,7 @@ bool ls_run(Command *self, const char *program_name, int argc, char **argv)
     size_t tasks_matched = 0;
     da_foreach(Task, task, &tasks) {
         if (!sv_eq(task->status, closed ? SVLIT("CLOSED") : SVLIT("OPEN"))) continue;
-        if (!task_matches_filter(task, filter, &stack)) continue;
+        if (!task_matches_query(task, query, &stack)) continue;
         print_task(dir_path, task);
         tasks_matched += 1;
     }
@@ -728,5 +728,5 @@ int main(int argc, char **argv)
 #include "path.c"
 #include "huid.c"
 #include "md.c"
-#include "filter.c"
+#include "query.c"
 #include "task.c"

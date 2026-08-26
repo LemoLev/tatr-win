@@ -1,6 +1,6 @@
 # Rename tatr 'filter language' to 'query language' throughout the code base
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 50
 - TAGS: release
 

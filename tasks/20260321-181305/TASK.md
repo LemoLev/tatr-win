@@ -10,7 +10,7 @@ Repro:
 [streamer@markov thirdparty]$ pwd
 /home/streamer/Programming/tsoding/tatr/thirdparty
 [streamer@markov thirdparty]$ tatr ls | head
-../asks/<HUID>/TASK.md:1: [PRIORITY: 100] Document the filter language
+../asks/<HUID>/TASK.md:1: [PRIORITY: 100] Document the query language
 ../asks/<HUID>/TASK.md:1: [PRIORITY: 100, TAGS: bug] When you have several TASK.md opened, it's unclear which issues they belong to
 ../asks/<HUID>/TASK.md:1: [PRIORITY: 100, TAGS: stream] Build a graph of issues crossreferring to each other
 ../asks/<HUID>/TASK.md:1: [PRIORITY: 90 ] Description for tags

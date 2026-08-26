@@ -15,14 +15,14 @@ typedef struct {
     bool tatr_ls_ok;
 } Test_Runner;
 
-bool run_filter_payload(Test_Runner *r, const char *filter_payload)
+bool run_query_payload(Test_Runner *r, const char *query_payload)
 {
     const char *test_stdout_path = BUILD_FOLDER"test_stdout.txt";
     const char *test_stderr_path = BUILD_FOLDER"test_stderr.txt";
     cmd_append(&r->cmd, BUILD_FOLDER"tatr");
     cmd_append(&r->cmd, "ls");
     cmd_append(&r->cmd, "-debug");
-    cmd_append(&r->cmd, filter_payload);
+    cmd_append(&r->cmd, query_payload);
     Log_Handler *saved_log_handler = get_log_handler();
     set_log_handler(null_log_handler);
     {
@@ -53,10 +53,10 @@ bool assert_test_output(const char *output_label, String_View expected_stdout, S
     return true;
 }
 
-bool test_ls_filter_negation_of_complex_expression_in_parens(Test_Runner *r)
+bool test_ls_query_negation_of_complex_expression_in_parens(Test_Runner *r)
 {
     nob_log(INFO, "Running %s...", __func__);
-    if (!run_filter_payload(r, "not (tagged or .bug and .test and .foo and .bar)")) return 1;
+    if (!run_query_payload(r, "not (tagged or .bug and .test and .foo and .bar)")) return 1;
     if (!r->tatr_ls_ok) {
         fprintf(stderr, "%s:%d: ERROR: Command failed, but should've suceeded\n", __FILE__, __LINE__);
         return false;
@@ -80,10 +80,10 @@ bool test_ls_filter_negation_of_complex_expression_in_parens(Test_Runner *r)
     return true;
 }
 
-bool test_ls_filter_not_stuck_to_open_paren(Test_Runner *r)
+bool test_ls_query_not_stuck_to_open_paren(Test_Runner *r)
 {
     nob_log(INFO, "Running %s...", __func__);
-    if (!run_filter_payload(r, "not(.bug and .test) and .filter")) return false;
+    if (!run_query_payload(r, "not(.bug and .test) and .query")) return false;
     if (!r->tatr_ls_ok) {
         nob_log(ERROR, "Command failed, but should've suceeded");
         return false;
@@ -95,7 +95,7 @@ bool test_ls_filter_not_stuck_to_open_paren(Test_Runner *r)
             "OP_TAG test\n"
             "OP_AND\n"
             "OP_NOT\n"
-            "OP_TAG filter\n"
+            "OP_TAG query\n"
             "OP_AND\n"),
         sb_to_sv(r->sb_stdout))) return false;
     if (!assert_test_output("STDERR", (String_View){0}, sb_to_sv(r->sb_stderr))) return false;
@@ -103,10 +103,10 @@ bool test_ls_filter_not_stuck_to_open_paren(Test_Runner *r)
     return true;
 }
 
-bool test_ls_filter_report_error_utf8(Test_Runner *r)
+bool test_ls_query_report_error_utf8(Test_Runner *r)
 {
     nob_log(INFO, "Running %s...", __func__);
-    if (!run_filter_payload(r, ".привет hello")) return false;
+    if (!run_query_payload(r, ".привет hello")) return false;
     if (r->tatr_ls_ok) {
         nob_log(ERROR, "Command succeeded, but should've failed");
         return false;
@@ -236,9 +236,9 @@ int main(int argc, char **argv)
         if (!cmd_run(&cmd)) return 1;
 
         Test_Runner r = {0};
-        if (!test_ls_filter_negation_of_complex_expression_in_parens(&r)) return 1;
-        if (!test_ls_filter_not_stuck_to_open_paren(&r)) return 1;
-        if (!test_ls_filter_report_error_utf8(&r)) return 1;
+        if (!test_ls_query_negation_of_complex_expression_in_parens(&r)) return 1;
+        if (!test_ls_query_not_stuck_to_open_paren(&r)) return 1;
+        if (!test_ls_query_report_error_utf8(&r)) return 1;
     }
 
     if (run) {
