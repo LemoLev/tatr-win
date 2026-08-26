@@ -2,6 +2,6 @@
 
 - STATUS: OPEN
 - PRIORITY: 100
-- TAGS: scope
+- TAGS: scope,release
 
 No description.
