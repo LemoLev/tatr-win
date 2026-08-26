@@ -49,3 +49,21 @@ There might be an optional `tasks/tags` file with the following format:
 ```
 
 It serves as a documentation for each existing tag and the thirdparty tools may use it to display the tag descriptions.
+
+# Filter Language
+
+Filter language is used with `tatr ls` command to select a set of tasks.
+
+## Syntax
+
+Here is the [Backus–Naur form](https://en.wikipedia.org/wiki/Backus%E2%80%93Naur_form) of the language:
+
+```
+<expr> ::= <or>
+<or> ::= <and> *['or' <and>]
+<and> ::= <primary> *['and' <primary>]
+<primary> ::= <tag> | '(' <primary> ')' | 'not' <expr> | 'any' | 'tagged'
+<tag> ::= '.' 1*<any character except ','>
+```
+
+The `<expr>` is fed into `tatr ls` like this: `tatr ls <expr>`.

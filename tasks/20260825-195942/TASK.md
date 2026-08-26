@@ -1,4 +1,4 @@
-# Move the relative path test into a separate unit
+# Move the relative path tests into a separate unit
 
 - STATUS: OPEN
 - PRIORITY: 100
