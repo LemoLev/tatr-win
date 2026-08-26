@@ -1,6 +1,6 @@
 # Document the query language
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 100
 - TAGS: release,scope
 

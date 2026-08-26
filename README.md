@@ -54,20 +54,6 @@ It serves as a documentation for each existing tag and the thirdparty tools may 
 
 Query language is used with `tatr ls` command to select a set of tasks.
 
-## Syntax
-
-Here is the [Backus–Naur form](https://en.wikipedia.org/wiki/Backus%E2%80%93Naur_form) of the language:
-
-```
-<expr>    ::= <or>
-<or>      ::= <and> *('or' <and>)
-<and>     ::= <primary> *('and' <primary>)
-<primary> ::= <tag> | '(' <primary> ')' | 'not' <expr> | 'any' | 'tagged'
-<tag>     ::= '.' 1*<any character except ','>
-```
-
-You pass the expressions to tatr like this `tatr ls <expr>` and it lists all tasks that match the query.
-
 ## Examples
 
 Query everything with tag `bug`:
@@ -87,3 +73,26 @@ Everything that is not tagged:
 ```console
 $ tatr ls not tagged
 ```
+
+## Syntax
+
+Here is the [Backus–Naur form](https://en.wikipedia.org/wiki/Backus%E2%80%93Naur_form) of the language:
+
+```
+<expr>    ::= <or>
+<or>      ::= <and> *('or' <and>)
+<and>     ::= <primary> *('and' <primary>)
+<primary> ::= <tag> | '(' <primary> ')' | 'not' <expr> | 'any' | 'tagged'
+<tag>     ::= '.' 1*<any character except ','>
+```
+
+## Reference
+
+| Expression | Description |
+|-|-|
+| `<expr1> or <expr2> or ...` | Include task in the result when `<expr1>` or `<expr2>` or both are true for it. Just a regular [logical disjunction](https://en.wikipedia.org/wiki/Logical_disjunction). |
+| `<expr1> and <expr2> and ...` | Include task in the result when both `<expr1>` and `<expr2>` are true for it. Just a regular [logical conjunction](https://en.wikipedia.org/wiki/Logical_conjunction) |
+| `.<tag>` | Include task in the result when its `TAGS` property contains `<tag>` |
+| `not <expr>` | Include task in the result when `<expr>` is false for it. |
+| `tagged` | Include task in the result when its `TAGS` property doesn't contain any tags or entirely non-existant. |
+| `any` | An expression that is always true for any task. |
