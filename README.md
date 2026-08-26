@@ -59,11 +59,31 @@ Filter language is used with `tatr ls` command to select a set of tasks.
 Here is the [Backus–Naur form](https://en.wikipedia.org/wiki/Backus%E2%80%93Naur_form) of the language:
 
 ```
-<expr> ::= <or>
-<or> ::= <and> *['or' <and>]
-<and> ::= <primary> *['and' <primary>]
+<expr>    ::= <or>
+<or>      ::= <and> *('or' <and>)
+<and>     ::= <primary> *('and' <primary>)
 <primary> ::= <tag> | '(' <primary> ')' | 'not' <expr> | 'any' | 'tagged'
-<tag> ::= '.' 1*<any character except ','>
+<tag>     ::= '.' 1*<any character except ','>
 ```
 
-The `<expr>` is fed into `tatr ls` like this: `tatr ls <expr>`.
+You pass the expressions to tatr like this `tatr ls <expr>` and it lists all tasks that match the filter.
+
+## Examples
+
+Query everything with tag `bug`:
+
+```console
+$ tatr ls .bug
+```
+
+Everything with tag `bug`, but without tag `ui`:
+
+```console
+$ tatr ls .bug and not .ui
+```
+
+Everything that is not tagged:
+
+```console
+$ tatr ls not tagged
+```
