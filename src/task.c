@@ -67,10 +67,7 @@ bool load_tasks(Tasks *tasks, const char *dir_path)
         String_Builder sb_content = {0};
         const char *task_md_path = temp_sprintf("%s/%s/TASK.md", dir_path, id);
         // TASK(20260308-171346): there should be a command that reports all the skipped weird folders and files found in the tasks/ folder
-        if (!file_exists(task_md_path)) {
-            nob_log(WARNING, "%s/%s/ doesn't contain TASK.md!", dir_path, id);
-            continue;
-        }
+        if (!file_exists(task_md_path)) continue;
         if (!read_entire_file(task_md_path, &sb_content)) return_defer(false);
         sb_append_null(&sb_content);
 
