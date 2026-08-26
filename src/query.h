@@ -14,6 +14,10 @@ typedef enum {
     OP_INTEGER,
     OP_LT,
     OP_GT,
+    OP_LTE,
+    OP_GTE,
+    OP_EQ,
+    OP_NEQ,
 } Op_Kind;
 
 typedef struct {

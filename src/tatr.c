@@ -167,6 +167,7 @@ bool ls_run(Command *self, const char *program_name, int argc, char **argv)
 
     if (tasks_matched == 0) {
         printf("No tasks were found\n");
+        return true;
     }
 
     return true;

@@ -20,6 +20,10 @@ void print_op(Op op)
     case OP_INTEGER:  printf("OP_INTEGER\n");                         break;
     case OP_LT:       printf("OP_LT\n");                              break;
     case OP_GT:       printf("OP_GT\n");                              break;
+    case OP_LTE:      printf("OP_LTE\n");                             break;
+    case OP_GTE:      printf("OP_GTE\n");                             break;
+    case OP_EQ:       printf("OP_EQ\n");                              break;
+    case OP_NEQ:      printf("OP_NEQ\n");                             break;
     default: UNREACHABLE("Op_Kind");
     }
 }
@@ -74,7 +78,6 @@ Task_Match_Result task_matches_query(String_View original_src, const Task *task,
         case OP_INTEGER: {
             da_append(stack, stack_int(op->src, op->as.integer));
         } break;
-        default: UNREACHABLE("Op_Kind");
         case OP_LT: {
             Stack_Item a = {0};
             Stack_Item b = {0};
@@ -89,6 +92,35 @@ Task_Match_Result task_matches_query(String_View original_src, const Task *task,
             if (!pop_type(original_src, stack, TYPE_INT, &a)) return TMR_ERROR;
             da_append(stack, stack_bool(op->src, a.as.integer > b.as.integer));
         } break;
+        case OP_LTE: {
+            Stack_Item a = {0};
+            Stack_Item b = {0};
+            if (!pop_type(original_src, stack, TYPE_INT, &b)) return TMR_ERROR;
+            if (!pop_type(original_src, stack, TYPE_INT, &a)) return TMR_ERROR;
+            da_append(stack, stack_bool(op->src, a.as.integer <= b.as.integer));
+        } break;
+        case OP_GTE: {
+            Stack_Item a = {0};
+            Stack_Item b = {0};
+            if (!pop_type(original_src, stack, TYPE_INT, &b)) return TMR_ERROR;
+            if (!pop_type(original_src, stack, TYPE_INT, &a)) return TMR_ERROR;
+            da_append(stack, stack_bool(op->src, a.as.integer >= b.as.integer));
+        } break;
+        case OP_EQ: {
+            Stack_Item a = {0};
+            Stack_Item b = {0};
+            if (!pop_type(original_src, stack, TYPE_INT, &b)) return TMR_ERROR;
+            if (!pop_type(original_src, stack, TYPE_INT, &a)) return TMR_ERROR;
+            da_append(stack, stack_bool(op->src, a.as.integer == b.as.integer));
+        } break;
+        case OP_NEQ: {
+            Stack_Item a = {0};
+            Stack_Item b = {0};
+            if (!pop_type(original_src, stack, TYPE_INT, &b)) return TMR_ERROR;
+            if (!pop_type(original_src, stack, TYPE_INT, &a)) return TMR_ERROR;
+            da_append(stack, stack_bool(op->src, a.as.integer != b.as.integer));
+        } break;
+        default: UNREACHABLE("Op_Kind");
         }
     }
     Stack_Item result = {0};
@@ -189,7 +221,7 @@ bool compile_query_primary(String_View original_src, String_View *src, Query *qu
 
 bool compile_query_lt_gt(String_View original_src, String_View *src, Query *query)
 {
-    // <expr> [(lt|gt) <expr>]*
+    // <expr> [(lt|gt|lte|gte|eq) <expr>]*
     if (!compile_query_primary(original_src, src, query)) return false;
     for (;;) {
         *src = sv_trim_left(*src);
@@ -204,6 +236,26 @@ bool compile_query_lt_gt(String_View original_src, String_View *src, Query *quer
         if (sv_eq(key, sv_from_cstr("gt"))) {
             if (!compile_query_primary(original_src, src, query)) return false;
             da_append(query, ((Op) { .kind_ = OP_GT, .src = *src, }));
+            continue;
+        }
+        if (sv_eq(key, sv_from_cstr("lte"))) {
+            if (!compile_query_primary(original_src, src, query)) return false;
+            da_append(query, ((Op) { .kind_ = OP_LTE, .src = *src, }));
+            continue;
+        }
+        if (sv_eq(key, sv_from_cstr("gte"))) {
+            if (!compile_query_primary(original_src, src, query)) return false;
+            da_append(query, ((Op) { .kind_ = OP_GTE, .src = *src, }));
+            continue;
+        }
+        if (sv_eq(key, sv_from_cstr("eq"))) {
+            if (!compile_query_primary(original_src, src, query)) return false;
+            da_append(query, ((Op) { .kind_ = OP_EQ, .src = *src, }));
+            continue;
+        }
+        if (sv_eq(key, sv_from_cstr("neq"))) {
+            if (!compile_query_primary(original_src, src, query)) return false;
+            da_append(query, ((Op) { .kind_ = OP_NEQ, .src = *src, }));
             continue;
         }
         *src = saved_src;

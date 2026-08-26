@@ -74,6 +74,12 @@ Everything that is not tagged:
 $ tatr ls not tagged
 ```
 
+All the bugs with priority less than 50:
+
+```console
+$ tatr ls .bug and priority lt 50
+```
+
 ## Syntax
 
 Here is the [Backus–Naur form](https://en.wikipedia.org/wiki/Backus%E2%80%93Naur_form) of the language:
@@ -82,7 +88,7 @@ Here is the [Backus–Naur form](https://en.wikipedia.org/wiki/Backus%E2%80%93Na
 <expr>    ::= <or>
 <or>      ::= <and> *('or' <and>)
 <and>     ::= <compare> *('and' <compare>)
-<compare> ::= <primary> *(('lt'|'gt') <primary>)
+<compare> ::= <primary> *(('lt'|'gt'|'lte'|'gte'|'eq'|'neq') <primary>)
 <primary> ::= <tag>
             | '(' <expr> ')'
             | 'not' <expr>
@@ -98,10 +104,16 @@ Here is the [Backus–Naur form](https://en.wikipedia.org/wiki/Backus%E2%80%93Na
 
 | Expression | Description |
 |-|-|
-| `<expr1> or <expr2> or ...` | Include task in the result when `<expr1>` or `<expr2>` or both are true for it. Just a regular [logical disjunction](https://en.wikipedia.org/wiki/Logical_disjunction). |
-| `<expr1> and <expr2> and ...` | Include task in the result when both `<expr1>` and `<expr2>` are true for it. Just a regular [logical conjunction](https://en.wikipedia.org/wiki/Logical_conjunction) |
-| `.<tag>` | Include task in the result when its `TAGS` property contains `<tag>` |
-| `not <expr>` | Include task in the result when `<expr>` is false for it. |
-| `tagged` | Include task in the result when its `TAGS` property doesn't contain any tags or entirely non-existant. |
-| `any` | An expression that is always true for any task. |
+| `<expr1:bool> or <expr2:bool>` | True when `<expr1:bool>` or `<expr2:bool>` or both are true. Just a regular [logical disjunction](https://en.wikipedia.org/wiki/Logical_disjunction). |
+| `<expr1:bool> and <expr2:bool>` | True when both `<expr1:bool>` and `<expr2:bool>` are true. Just a regular [logical conjunction](https://en.wikipedia.org/wiki/Logical_conjunction) |
+| `.<tag>` | True when a task's `TAGS` property contains `<tag>` |
+| `not <expr:bool>` | True when `<expr:bool>` is false. |
+| `tagged` | True when a task has at least one tag in its `TAGS` property. |
+| `any` | Always true for any task. |
 | `priority` | Priority of the task as an integer. |
+| `<expr1:int> lt <expr2:int>` | True when `<expr1:int>` is less than `<expr2:int>`.|
+| `<expr1:int> gt <expr2:int>` | True when `<expr1:int>` is greater than `<expr2:int>`.|
+| `<expr1:int> lte <expr2:int>` | True when `<expr1:int>` is less or equal to `<expr2:int>`.|
+| `<expr1:int> gte <expr2:int>` | True when `<expr1:int>` is greater or equal to `<expr2:int>`.|
+| `<expr1:int> eq <expr2:int>` | True when `<expr1:int>` is equal to `<expr2:int>`.|
+| `<expr1:int> neq <expr2:int>` | True when `<expr1:int>` is not equal to `<expr2:int>`.|
