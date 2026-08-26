@@ -81,9 +81,17 @@ Here is the [Backus–Naur form](https://en.wikipedia.org/wiki/Backus%E2%80%93Na
 ```
 <expr>    ::= <or>
 <or>      ::= <and> *('or' <and>)
-<and>     ::= <primary> *('and' <primary>)
-<primary> ::= <tag> | '(' <primary> ')' | 'not' <expr> | 'any' | 'tagged'
+<and>     ::= <compare> *('and' <compare>)
+<compare> ::= <primary> *(('lt'|'gt') <primary>)
+<primary> ::= <tag>
+            | '(' <expr> ')'
+            | 'not' <expr>
+            | 'any'
+            | 'tagged'
+            | 'priority'
+            | <number>
 <tag>     ::= '.' 1*<any character except ','>
+<number>  ::= ['-'] 1*<digit>
 ```
 
 ## Reference
@@ -96,3 +104,4 @@ Here is the [Backus–Naur form](https://en.wikipedia.org/wiki/Backus%E2%80%93Na
 | `not <expr>` | Include task in the result when `<expr>` is false for it. |
 | `tagged` | Include task in the result when its `TAGS` property doesn't contain any tags or entirely non-existant. |
 | `any` | An expression that is always true for any task. |
+| `priority` | Priority of the task as an integer. |

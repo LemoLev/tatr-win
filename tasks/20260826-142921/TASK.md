@@ -1,6 +1,6 @@
 # Add things like `priority > 10` to tatr query language
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 100
 - TAGS: scope,release
 

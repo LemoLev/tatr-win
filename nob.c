@@ -178,8 +178,10 @@ int main(int argc, char **argv)
     bool no_test = false;
     bool run = false;
     bool help = false;
+    bool debug = false;
     flag_bool_var(&no_test, "no-test", false, "Do not run tests after building");
     flag_bool_var(&run, "run", false, "Run the app after the build");
+    flag_bool_var(&debug, "debug", false, "Run the app in the debugger (gf2 specifically)");
     flag_bool_var(&help, "help", false, "Print this help message");
 
     if (!flag_parse(argc, argv)) {
@@ -242,6 +244,7 @@ int main(int argc, char **argv)
     }
 
     if (run) {
+        if (debug) cmd_append(&cmd, "gf2");
         cmd_append(&cmd, BUILD_FOLDER"tatr");
         da_append_many(&cmd, argv, argc);
         if (!cmd_run(&cmd)) return false;
