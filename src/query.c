@@ -17,7 +17,7 @@ void print_op(Op op)
     case OP_AND:      printf("OP_AND\n");                             break;
     case OP_TAGGED:   printf("OP_TAGGED\n");                          break;
     case OP_PRIORITY: printf("OP_PRIORITY\n");                        break;
-    case OP_INTEGER:  printf("OP_INTEGER\n");                         break;
+    case OP_INTEGER:  printf("OP_INTEGER %ld\n", op.as.integer);      break;
     case OP_LT:       printf("OP_LT\n");                              break;
     case OP_GT:       printf("OP_GT\n");                              break;
     case OP_LTE:      printf("OP_LTE\n");                             break;

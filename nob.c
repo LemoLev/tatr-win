@@ -135,7 +135,7 @@ bool test_ls_query_priority_gt_20(Test_Runner *r)
         "STDOUT",
         SVLIT(
             "OP_PRIORITY\n"
-            "OP_INTEGER\n"
+            "OP_INTEGER 20\n"
             "OP_GT\n"),
         sb_to_sv(r->sb_stdout))) return false;
     if (!assert_test_output(
