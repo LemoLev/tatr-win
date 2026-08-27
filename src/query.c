@@ -212,9 +212,9 @@ bool compile_query_primary(String_View original_src, String_View *src, Query *qu
 
     *src = saved_src;
     if (key.count == 0) {
-        report_compile_query_error(original_src, src, "Expected `.`, `(`, `not`, `any`, or `tagged`.");
+        report_compile_query_error(original_src, src, "Expected `.`, `(`, `not`, `any`, `tagged`, or `priority`.");
     } else {
-        report_compile_query_error(original_src, src, "Unknown keyword `"SV_Fmt"`. Expected keywords `not`, `any`, or `tagged`.", SV_Arg(key));
+        report_compile_query_error(original_src, src, "Unknown keyword `"SV_Fmt"`. Expected keywords `not`, `any`, `tagged`, or `priority`.", SV_Arg(key));
     }
     return false;
 }
