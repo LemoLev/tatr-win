@@ -59,8 +59,8 @@ typedef struct {
 bool compile_query(String_View original_src, String_View *src, Query *query);
 
 typedef enum {
-    TYPE_BOOL,
-    TYPE_INT,
+    TYPE_BOOLEAN,
+    TYPE_INTEGER,
     __type_count,
 } Type;
 

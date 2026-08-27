@@ -52,21 +52,21 @@ Task_Match_Result task_matches_query(String_View original_src, const Task *task,
         } break;
         case OP_NOT: {
             Stack_Item item = {0};
-            if (!pop_type(original_src, stack, TYPE_BOOL, &item)) return TMR_ERROR;
+            if (!pop_type(original_src, stack, TYPE_BOOLEAN, &item)) return TMR_ERROR;
             da_append(stack, stack_bool(op->src, !item.as.boolean));
         } break;
         case OP_OR: {
             Stack_Item a = {0};
             Stack_Item b = {0};
-            if (!pop_type(original_src, stack, TYPE_BOOL, &a)) return TMR_ERROR;
-            if (!pop_type(original_src, stack, TYPE_BOOL, &b)) return TMR_ERROR;
+            if (!pop_type(original_src, stack, TYPE_BOOLEAN, &a)) return TMR_ERROR;
+            if (!pop_type(original_src, stack, TYPE_BOOLEAN, &b)) return TMR_ERROR;
             da_append(stack, stack_bool(op->src, a.as.boolean || b.as.boolean));
         } break;
         case OP_AND: {
             Stack_Item a = {0};
             Stack_Item b = {0};
-            if (!pop_type(original_src, stack, TYPE_BOOL, &a)) return TMR_ERROR;
-            if (!pop_type(original_src, stack, TYPE_BOOL, &b)) return TMR_ERROR;
+            if (!pop_type(original_src, stack, TYPE_BOOLEAN, &a)) return TMR_ERROR;
+            if (!pop_type(original_src, stack, TYPE_BOOLEAN, &b)) return TMR_ERROR;
             da_append(stack, stack_bool(op->src, a.as.boolean && b.as.boolean));
         } break;
         case OP_TAGGED: {
@@ -81,50 +81,50 @@ Task_Match_Result task_matches_query(String_View original_src, const Task *task,
         case OP_LT: {
             Stack_Item a = {0};
             Stack_Item b = {0};
-            if (!pop_type(original_src, stack, TYPE_INT, &b)) return TMR_ERROR;
-            if (!pop_type(original_src, stack, TYPE_INT, &a)) return TMR_ERROR;
+            if (!pop_type(original_src, stack, TYPE_INTEGER, &b)) return TMR_ERROR;
+            if (!pop_type(original_src, stack, TYPE_INTEGER, &a)) return TMR_ERROR;
             da_append(stack, stack_bool(op->src, a.as.integer < b.as.integer));
         } break;
         case OP_GT: {
             Stack_Item a = {0};
             Stack_Item b = {0};
-            if (!pop_type(original_src, stack, TYPE_INT, &b)) return TMR_ERROR;
-            if (!pop_type(original_src, stack, TYPE_INT, &a)) return TMR_ERROR;
+            if (!pop_type(original_src, stack, TYPE_INTEGER, &b)) return TMR_ERROR;
+            if (!pop_type(original_src, stack, TYPE_INTEGER, &a)) return TMR_ERROR;
             da_append(stack, stack_bool(op->src, a.as.integer > b.as.integer));
         } break;
         case OP_LTE: {
             Stack_Item a = {0};
             Stack_Item b = {0};
-            if (!pop_type(original_src, stack, TYPE_INT, &b)) return TMR_ERROR;
-            if (!pop_type(original_src, stack, TYPE_INT, &a)) return TMR_ERROR;
+            if (!pop_type(original_src, stack, TYPE_INTEGER, &b)) return TMR_ERROR;
+            if (!pop_type(original_src, stack, TYPE_INTEGER, &a)) return TMR_ERROR;
             da_append(stack, stack_bool(op->src, a.as.integer <= b.as.integer));
         } break;
         case OP_GTE: {
             Stack_Item a = {0};
             Stack_Item b = {0};
-            if (!pop_type(original_src, stack, TYPE_INT, &b)) return TMR_ERROR;
-            if (!pop_type(original_src, stack, TYPE_INT, &a)) return TMR_ERROR;
+            if (!pop_type(original_src, stack, TYPE_INTEGER, &b)) return TMR_ERROR;
+            if (!pop_type(original_src, stack, TYPE_INTEGER, &a)) return TMR_ERROR;
             da_append(stack, stack_bool(op->src, a.as.integer >= b.as.integer));
         } break;
         case OP_EQ: {
             Stack_Item a = {0};
             Stack_Item b = {0};
-            if (!pop_type(original_src, stack, TYPE_INT, &b)) return TMR_ERROR;
-            if (!pop_type(original_src, stack, TYPE_INT, &a)) return TMR_ERROR;
+            if (!pop_type(original_src, stack, TYPE_INTEGER, &b)) return TMR_ERROR;
+            if (!pop_type(original_src, stack, TYPE_INTEGER, &a)) return TMR_ERROR;
             da_append(stack, stack_bool(op->src, a.as.integer == b.as.integer));
         } break;
         case OP_NEQ: {
             Stack_Item a = {0};
             Stack_Item b = {0};
-            if (!pop_type(original_src, stack, TYPE_INT, &b)) return TMR_ERROR;
-            if (!pop_type(original_src, stack, TYPE_INT, &a)) return TMR_ERROR;
+            if (!pop_type(original_src, stack, TYPE_INTEGER, &b)) return TMR_ERROR;
+            if (!pop_type(original_src, stack, TYPE_INTEGER, &a)) return TMR_ERROR;
             da_append(stack, stack_bool(op->src, a.as.integer != b.as.integer));
         } break;
         default: UNREACHABLE("Op_Kind");
         }
     }
     Stack_Item result = {0};
-    if (!pop_type(original_src, stack, TYPE_BOOL, &result)) {
+    if (!pop_type(original_src, stack, TYPE_BOOLEAN, &result)) {
         return TMR_ERROR;
     }
     if (result.as.boolean) {
@@ -322,7 +322,7 @@ bool compile_query(String_View original_src, String_View *src, Query *query)
 Stack_Item stack_bool(String_View src, bool value)
 {
     return (Stack_Item) {
-        .type = TYPE_BOOL,
+        .type = TYPE_BOOLEAN,
         .src = src,
         .as = { .boolean = value },
     };
@@ -331,7 +331,7 @@ Stack_Item stack_bool(String_View src, bool value)
 Stack_Item stack_int(String_View src, int value)
 {
     return (Stack_Item) {
-        .type = TYPE_INT,
+        .type = TYPE_INTEGER,
         .src = src,
         .as = { .integer = value },
     };
@@ -340,8 +340,8 @@ Stack_Item stack_int(String_View src, int value)
 const char *type_name(Type type)
 {
     switch (type) {
-    case TYPE_BOOL: return "boolean";
-    case TYPE_INT:  return "integer";
+    case TYPE_BOOLEAN: return "boolean";
+    case TYPE_INTEGER: return "integer";
     case __type_count:
     default:
         UNREACHABLE("type_name");
