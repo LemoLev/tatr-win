@@ -123,6 +123,29 @@ bool test_ls_query_report_error_utf8(Test_Runner *r)
     return true;
 }
 
+bool test_ls_query_priority_gt_20(Test_Runner *r)
+{
+    nob_log(INFO, "Running %s...", __func__);
+    if (!run_query_payload(r, "priority gt 20")) return false;
+    if (!r->tatr_ls_ok) {
+        nob_log(ERROR, "Command failed, but should've suceeded");
+        return false;
+    }
+    if (!assert_test_output(
+        "STDOUT",
+        SVLIT(
+            "OP_PRIORITY\n"
+            "OP_INTEGER\n"
+            "OP_GT\n"),
+        sb_to_sv(r->sb_stdout))) return false;
+    if (!assert_test_output(
+        "STDERR",
+        (String_View){0},
+        sb_to_sv(r->sb_stderr))) return false;
+    nob_log(INFO, "OK");
+    return true;
+}
+
 void cc(Cmd *cmd)
 {
     cmd_append(cmd, "clang");
@@ -241,6 +264,7 @@ int main(int argc, char **argv)
         if (!test_ls_query_negation_of_complex_expression_in_parens(&r)) return 1;
         if (!test_ls_query_not_stuck_to_open_paren(&r)) return 1;
         if (!test_ls_query_report_error_utf8(&r)) return 1;
+        if (!test_ls_query_priority_gt_20(&r)) return 1;
     }
 
     if (run) {
