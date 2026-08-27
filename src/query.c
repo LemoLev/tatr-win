@@ -346,6 +346,7 @@ const char *type_name(Type type)
     default:
         UNREACHABLE("type_name");
     }
+    return NULL;
 }
 
 Op op(Op_Kind kind, String_View src)

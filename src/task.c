@@ -152,6 +152,7 @@ Task_Compare task_sorter(bool by_id, bool ascending)
         }
     }
     UNREACHABLE("task_sorter");
+    return NULL;
 }
 
 bool task_matches_tags(const Task *task, const char **tags, size_t tags_count)

@@ -66,17 +66,17 @@ typedef enum {
 
 const char *type_name(Type type);
 
+_Static_assert(__type_count == 2, "Amount of stack item tags has changed");
 typedef struct {
     Type type;
     String_View src;
     union {
-        static_assert(__type_count == 2, "Amount of stack item tags has changed");
         bool boolean;
         long integer;
     } as;
 } Stack_Item;
 
-static_assert(__type_count == 2, "Amount of stack item tags has changed");
+_Static_assert(__type_count == 2, "Amount of stack item tags has changed");
 Stack_Item stack_bool(String_View src, bool value);
 Stack_Item stack_int(String_View src, int value);
 

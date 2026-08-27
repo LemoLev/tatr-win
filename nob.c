@@ -12,14 +12,16 @@ typedef enum {
     CC,
     GCC,
     CLANG,
+    TCC,
     __compiler_count,
 } Compiler;
 
-static_assert(__compiler_count == 3, "Amount of compilers have changed");
+static_assert(__compiler_count == 4, "Amount of compilers have changed");
 const char *compiler_names[__compiler_count] = {
     [CC]    = "cc",
     [GCC]   = "gcc",
     [CLANG] = "clang",
+    [TCC]   = "tcc",
 };
 
 bool compiler_by_name(const char *name, Compiler *compiler)
@@ -179,12 +181,13 @@ bool test_ls_query_priority_gt_20(Test_Runner *r)
 
 void cc(Cmd *cmd, Compiler compiler)
 {
-    static_assert(__compiler_count == 3, "Amount of compilers have changed");
+    static_assert(__compiler_count == 4, "Amount of compilers have changed");
 
     switch (compiler) {
     case CC:    cmd_append(cmd, "cc");    break;
     case GCC:   cmd_append(cmd, "gcc");   break;
     case CLANG: cmd_append(cmd, "clang"); break;
+    case TCC:   cmd_append(cmd, "tcc");   break;
     case __compiler_count:
     default:
         UNREACHABLE("Compiler");
