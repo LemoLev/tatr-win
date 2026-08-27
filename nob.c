@@ -12,7 +12,7 @@ typedef struct {
     Cmd cmd;
     String_Builder sb_stdout;
     String_Builder sb_stderr;
-    bool tatr_ls_ok;
+    bool ok;
 } Test_Runner;
 
 bool run_query_payload(Test_Runner *r, const char *query_payload)
@@ -26,7 +26,7 @@ bool run_query_payload(Test_Runner *r, const char *query_payload)
     Log_Handler *saved_log_handler = get_log_handler();
     set_log_handler(null_log_handler);
     {
-        r->tatr_ls_ok = cmd_run(
+        r->ok = cmd_run(
             &r->cmd,
             .stdout_path = test_stdout_path,
             .stderr_path = test_stderr_path
@@ -37,6 +37,24 @@ bool run_query_payload(Test_Runner *r, const char *query_payload)
     if (!read_entire_file(test_stdout_path, &r->sb_stdout)) return false;
     r->sb_stderr.count = 0;
     if (!read_entire_file(test_stderr_path, &r->sb_stderr)) return false;
+    return true;
+}
+
+bool expect_failure(Test_Runner *r)
+{
+    if (r->ok) {
+        nob_log(ERROR, "Command succeeded, but should've failed");
+        return false;
+    }
+    return true;
+}
+
+bool expect_success(Test_Runner *r)
+{
+    if (!r->ok) {
+        nob_log(ERROR, "Command failed, but should've suceeded");
+        return false;
+    }
     return true;
 }
 
@@ -56,11 +74,8 @@ bool assert_test_output(const char *output_label, String_View expected_stdout, S
 bool test_ls_query_negation_of_complex_expression_in_parens(Test_Runner *r)
 {
     nob_log(INFO, "Running %s...", __func__);
-    if (!run_query_payload(r, "not (tagged or .bug and .test and .foo and .bar)")) return 1;
-    if (!r->tatr_ls_ok) {
-        fprintf(stderr, "%s:%d: ERROR: Command failed, but should've suceeded\n", __FILE__, __LINE__);
-        return false;
-    }
+    if (!run_query_payload(r, "not (tagged or .bug and .test and .foo and .bar)")) return false;
+    if (!expect_success(r)) return false;
     if (!assert_test_output(
         "STDOUT",
         sv_from_cstr(
@@ -84,10 +99,7 @@ bool test_ls_query_not_stuck_to_open_paren(Test_Runner *r)
 {
     nob_log(INFO, "Running %s...", __func__);
     if (!run_query_payload(r, "not(.bug and .test) and .query")) return false;
-    if (!r->tatr_ls_ok) {
-        nob_log(ERROR, "Command failed, but should've suceeded");
-        return false;
-    }
+    if (!expect_success(r)) return false;
     if (!assert_test_output(
         "STDOUT",
         sv_from_cstr(
@@ -107,10 +119,7 @@ bool test_ls_query_report_error_utf8(Test_Runner *r)
 {
     nob_log(INFO, "Running %s...", __func__);
     if (!run_query_payload(r, ".привет hello")) return false;
-    if (r->tatr_ls_ok) {
-        nob_log(ERROR, "Command succeeded, but should've failed");
-        return false;
-    }
+    if (!expect_failure(r)) return false;
     if (!assert_test_output("STDOUT", (String_View){0}, sb_to_sv(r->sb_stdout))) return false;
     if (!assert_test_output(
         "STDERR",
@@ -127,10 +136,7 @@ bool test_ls_query_priority_gt_20(Test_Runner *r)
 {
     nob_log(INFO, "Running %s...", __func__);
     if (!run_query_payload(r, "priority gt 20")) return false;
-    if (!r->tatr_ls_ok) {
-        nob_log(ERROR, "Command failed, but should've suceeded");
-        return false;
-    }
+    if (!expect_success(r)) return false;
     if (!assert_test_output(
         "STDOUT",
         SVLIT(
