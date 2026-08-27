@@ -241,12 +241,12 @@ int main(int argc, char **argv)
     Cmd cmd = {0};
     Procs procs = {0};
 
-    bool no_test = false;
+    bool test = false;
     bool run = false;
     bool help = false;
     bool debug = false;
     char *compiler_name = NULL;
-    flag_bool_var(&no_test, "no-test", false, "Do not run tests after building");
+    flag_bool_var(&test, "test", false, "Run the tests after building");
     flag_bool_var(&run, "run", false, "Run the app after the build");
     flag_bool_var(&debug, "debug", false, "Run the app in the debugger (gf2 specifically)");
     flag_bool_var(&help, "help", false, "Print this help message");
@@ -305,13 +305,13 @@ int main(int argc, char **argv)
     cmd_append(&cmd, SRC_FOLDER"tatr.c");
     if (!cmd_run(&cmd)) return 1;
 
-    cc(&cmd, compiler);
-    cmd_append(&cmd, "-DTASKS_TEST");
-    cmd_append(&cmd, "-o", BUILD_FOLDER"tatr-test");
-    cmd_append(&cmd, SRC_FOLDER"tatr.c");
-    if (!cmd_run(&cmd)) return 1;
+    if (test) {
+        cc(&cmd, compiler);
+        cmd_append(&cmd, "-DTASKS_TEST");
+        cmd_append(&cmd, "-o", BUILD_FOLDER"tatr-test");
+        cmd_append(&cmd, SRC_FOLDER"tatr.c");
+        if (!cmd_run(&cmd)) return 1;
 
-    if (!no_test) {
         cmd_append(&cmd, BUILD_FOLDER"tatr-test");
         if (!cmd_run(&cmd)) return 1;
 
