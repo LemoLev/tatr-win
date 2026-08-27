@@ -8,6 +8,31 @@
 #define SRC_FOLDER        "src/"
 #define THIRDPARTY_FOLDER "thirdparty/"
 
+typedef enum {
+    CC,
+    GCC,
+    CLANG,
+    __compiler_count,
+} Compiler;
+
+static_assert(__compiler_count == 3, "Amount of compilers have changed");
+const char *compiler_names[__compiler_count] = {
+    [CC]    = "cc",
+    [GCC]   = "gcc",
+    [CLANG] = "clang",
+};
+
+bool compiler_by_name(const char *name, Compiler *compiler)
+{
+    for (int i = 0; i < __compiler_count; ++i) {
+        if (strcmp(name, compiler_names[i]) == 0) {
+            *compiler = i;
+            return true;
+        }
+    }
+    return false;
+}
+
 typedef struct {
     Cmd cmd;
     String_Builder sb_stdout;
@@ -152,18 +177,27 @@ bool test_ls_query_priority_gt_20(Test_Runner *r)
     return true;
 }
 
-void cc(Cmd *cmd)
+void cc(Cmd *cmd, Compiler compiler)
 {
-    cmd_append(cmd, "clang");
+    static_assert(__compiler_count == 3, "Amount of compilers have changed");
+
+    switch (compiler) {
+    case CC:    cmd_append(cmd, "cc");    break;
+    case GCC:   cmd_append(cmd, "gcc");   break;
+    case CLANG: cmd_append(cmd, "clang"); break;
+    case __compiler_count:
+    default:
+        UNREACHABLE("Compiler");
+    }
+
     cmd_append(cmd, "-Wall");
     cmd_append(cmd, "-Wextra");
     cmd_append(cmd, "-Wswitch-enum");
     cmd_append(cmd, "-Wno-unused-function");
-    cmd_append(cmd, "-I.");
     cmd_append(cmd, "-I"THIRDPARTY_FOLDER);
     cmd_append(cmd, "-I"BUILD_FOLDER);
+    if (compiler == CLANG) cmd_append(cmd, "-fsanitize=memory");
     cmd_append(cmd, "-ggdb");
-    cmd_append(cmd, "-fsanitize=memory");
 }
 
 const char *get_current_date(void)
@@ -208,15 +242,27 @@ int main(int argc, char **argv)
     bool run = false;
     bool help = false;
     bool debug = false;
+    char *compiler_name = NULL;
     flag_bool_var(&no_test, "no-test", false, "Do not run tests after building");
     flag_bool_var(&run, "run", false, "Run the app after the build");
     flag_bool_var(&debug, "debug", false, "Run the app in the debugger (gf2 specifically)");
     flag_bool_var(&help, "help", false, "Print this help message");
+    flag_str_var(&compiler_name, "cc", "cc", "Compiler to use");
 
     if (!flag_parse(argc, argv)) {
         fprintf(stderr, "Usage: %s [OPTIONS]\n", flag_program_name());
         flag_print_options(stderr);
         flag_print_error(stderr);
+        return 1;
+    }
+
+    Compiler compiler;
+    if (!compiler_by_name(compiler_name, &compiler)) {
+        nob_log(ERROR, "Unknown compiler \"%s\"", compiler_name);
+        nob_log(ERROR, "Supported compilers:", compiler_name);
+        for (int i = 0; i < __compiler_count; ++i) {
+            nob_log(ERROR, "  %s", compiler_names[i]);
+        }
         return 1;
     }
 
@@ -251,12 +297,12 @@ int main(int argc, char **argv)
     sb_appendf(&sb_build_h, "#endif // BUILD_H_\n");
     if (!write_entire_file(BUILD_FOLDER"build.h", sb_build_h.items, sb_build_h.count)) return 1;
 
-    cc(&cmd);
+    cc(&cmd, compiler);
     cmd_append(&cmd, "-o", BUILD_FOLDER"tatr");
     cmd_append(&cmd, SRC_FOLDER"tatr.c");
     if (!cmd_run(&cmd)) return 1;
 
-    cc(&cmd);
+    cc(&cmd, compiler);
     cmd_append(&cmd, "-DTASKS_TEST");
     cmd_append(&cmd, "-o", BUILD_FOLDER"tatr-test");
     cmd_append(&cmd, SRC_FOLDER"tatr.c");
