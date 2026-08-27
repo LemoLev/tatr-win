@@ -2,4 +2,4 @@
 
 - STATUS: OPEN
 - PRIORITY: 100
-- TAGS: release
+- TAGS: release,scope

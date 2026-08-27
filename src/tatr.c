@@ -645,6 +645,12 @@ int main(int argc, char **argv)
             .rel_path = ".",
         },
         {
+            .description = "Same directory but root",
+            .dst_path = "/",
+            .src_path = "/",
+            .rel_path = ".",
+        },
+        {
             .description = "Same directory deeper",
             .dst_path = "/home/rexim/Programming/tsoding/sofren/tasks",
             .src_path = "/home/rexim/Programming/tsoding/sofren/tasks/20250831-161356/",
@@ -667,6 +673,24 @@ int main(int argc, char **argv)
             .dst_path = "/home/rexim/Programming/tsoding/sofren/tasks",
             .src_path = "/home_/rexim/Programming/tsoding/sofren/tasks",
             .rel_path = "../../../../../../home/rexim/Programming/tsoding/sofren/tasks",
+        },
+        {
+            .description = "Completely different path but opposite",
+            .dst_path = "/home_/rexim/Programming/tsoding/sofren/tasks",
+            .src_path = "/home/rexim/Programming/tsoding/sofren/tasks",
+            .rel_path = "../../../../../../home_/rexim/Programming/tsoding/sofren/tasks",
+        },
+        {
+            .description = "To the root",
+            .dst_path = "/",
+            .src_path = "/home/rexim/Programming/tsoding/sofren/tasks",
+            .rel_path = "../../../../../..",
+        },
+        {
+            .description = "From the root",
+            .dst_path = "/home/rexim/Programming/tsoding/sofren/tasks",
+            .src_path = "/",
+            .rel_path = "./home/rexim/Programming/tsoding/sofren/tasks",
         },
         {
             .description = "20260321-181305",

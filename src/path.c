@@ -122,69 +122,6 @@ static void test_path(void)
 
     printf("------------------------------\n");
 
-    // Relative
-    if (1) {
-        Path relative     = {0};
-        Path current      = {0};
-        Path target       = {0};
-        String_Builder sb = {0};
-
-        static struct {
-            String_View current;
-            String_View target;
-        } cases[] = {
-            {
-                .current = SVLIT_STATIC("/home/streamer/Programming/tsoding/tatr/thirdparty"),
-                .target  = SVLIT_STATIC("/home/streamer/Programming/tsoding/tatr/task"),
-            },
-            {
-                .current = SVLIT_STATIC("/home/streamer/Programming/tsoding/tatr/thirdparty"),
-                .target  = SVLIT_STATIC("/poopoo/peepee/"),
-            },
-            {
-                .current = SVLIT_STATIC("/poopoo/peepee/"),
-                .target  = SVLIT_STATIC("/home/streamer/Programming/tsoding/tatr/thirdparty"),
-            },
-            {
-                .current = SVLIT_STATIC("/"),
-                .target  = SVLIT_STATIC("/"),
-            },
-            {
-                .current = SVLIT_STATIC("/poopoo/peepee"),
-                .target  = SVLIT_STATIC("/poopoo/peepee"),
-            },
-            {
-                .current = SVLIT_STATIC("/poopoo"),
-                .target  = SVLIT_STATIC("/poopoo/peepee/foo/bar"),
-            },
-            {
-                .current = SVLIT_STATIC("/"),
-                .target  = SVLIT_STATIC("/poopoo/peepee/foo/bar"),
-            },
-            {
-                .current = SVLIT_STATIC("/poopoo/peepee/foo/bar"),
-                .target  = SVLIT_STATIC("/"),
-            },
-            {
-                .current = SVLIT_STATIC("/.poopoo/.peepee/.foo/.bar"),
-                .target  = SVLIT_STATIC("/"),
-            },
-        };
-
-        for (size_t i = 0; i < ARRAY_LEN(cases); ++i) {
-            if (i > 0) printf("\n");
-            path_parse(&current, cases[i].current);
-            path_parse(&target,  cases[i].target);
-            path_relative(&relative, current, target);
-
-            printf("current  = %s\n", path_render_cstr(&sb, current));
-            printf("target   = %s\n", path_render_cstr(&sb, target));
-            printf("relative = %s\n", path_render_cstr(&sb, relative));
-        }
-    }
-
-    printf("------------------------------\n");
-
     {
         Path path = {0};
         Path norm = {0};

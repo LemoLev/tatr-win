@@ -2,7 +2,7 @@
 
 - STATUS: OPEN
 - PRIORITY: 100
-- TAGS: scope,release
+- TAGS: release
 
 `YYYMMDD-HHMMSS[-<random-suffix>]`
 
