@@ -21,7 +21,7 @@ typedef enum {
 } Op_Kind;
 
 typedef struct {
-    Op_Kind kind_;
+    Op_Kind kind;
     union {
         String_View tag;
         long integer;
@@ -30,6 +30,25 @@ typedef struct {
 } Op;
 
 void print_op(Op op);
+
+Op op(Op_Kind kind, String_View src);
+Op op_set_tag(Op op, String_View tag);
+Op op_set_integer(Op op, long integer);
+
+#define op_tag(src, tag)         op_set_tag(op(OP_TAG, (src)), (tag))
+#define op_integer(src, integer) op_set_integer(op(OP_INTEGER, (src)), (integer))
+#define op_not(src)              op(OP_NOT, (src))
+#define op_any(src)              op(OP_ANY, (src))
+#define op_tagged(src)           op(OP_TAGGED, (src))
+#define op_priority(src)         op(OP_PRIORITY, (src))
+#define op_lt(src)               op(OP_LT, (src))
+#define op_gt(src)               op(OP_GT, (src))
+#define op_lte(src)              op(OP_LTE, (src))
+#define op_gte(src)              op(OP_GTE, (src))
+#define op_eq(src)               op(OP_EQ, (src))
+#define op_neq(src)              op(OP_NEQ, (src))
+#define op_and(src)              op(OP_AND, (src))
+#define op_or(src)               op(OP_OR, (src))
 
 typedef struct {
     Op *items;

@@ -9,7 +9,7 @@ static int not_end_of_query_token(int x)
 
 void print_op(Op op)
 {
-    switch (op.kind_) {
+    switch (op.kind) {
     case OP_ANY:      printf("OP_ANY\n");                             break;
     case OP_TAG:      printf("OP_TAG "SV_Fmt"\n", SV_Arg(op.as.tag)); break;
     case OP_NOT:      printf("OP_NOT\n");                             break;
@@ -42,7 +42,7 @@ Task_Match_Result task_matches_query(String_View original_src, const Task *task,
 {
     stack->count = 0;
     da_foreach(Op, op, &query) {
-        switch (op->kind_) {
+        switch (op->kind) {
         case OP_ANY: {
             da_append(stack, stack_bool(op->src, true));
         } break;
@@ -161,11 +161,7 @@ bool compile_query_primary(String_View original_src, String_View *src, Query *qu
     if (*src->data == '.') {
         sv_chop_left(src, 1);
         String_View tag = sv_chop_while(src, not_end_of_query_token);
-        da_append(query, ((Op) {
-            .kind_ = OP_TAG,
-            .as    = { .tag = tag, },
-            .src   = *src,
-        }));
+        da_append(query, op_tag(*src, tag));
         return true;
     }
     if (*src->data == '(') {
@@ -183,19 +179,19 @@ bool compile_query_primary(String_View original_src, String_View *src, Query *qu
     String_View key = sv_chop_while(src, not_end_of_query_token);
     if (sv_eq(key, SVLIT("not"))) {
         if (!compile_query_primary(original_src, src, query)) return false;
-        da_append(query, ((Op) { .kind_ = OP_NOT, .src = saved_src, }));
+        da_append(query, op_not(saved_src));
         return true;
     }
     if (sv_eq(key, SVLIT("any"))) {
-        da_append(query, ((Op) { .kind_ = OP_ANY, .src = saved_src, }));
+        da_append(query, op_any(saved_src));
         return true;
     }
     if (sv_eq(key, SVLIT("tagged"))) {
-        da_append(query, ((Op) { .kind_ = OP_TAGGED, .src = saved_src, }));
+        da_append(query, op_tagged(saved_src));
         return true;
     }
     if (sv_eq(key, SVLIT("priority"))) {
-        da_append(query, ((Op) { .kind_ = OP_PRIORITY, .src = saved_src, }));
+        da_append(query, op_priority(saved_src));
         return true;
     }
 
@@ -204,7 +200,7 @@ bool compile_query_primary(String_View original_src, String_View *src, Query *qu
     const char *nptr = temp_sv_to_cstr(key);
     long integer = strtol(nptr, &endptr, 10);
     if (nptr < endptr && *endptr == '\0') {
-        da_append(query, ((Op) { .kind_ = OP_INTEGER, .src = saved_src, .as = { .integer = integer }, }));
+        da_append(query, op_integer(saved_src, integer));
         temp_rewind(checkpoint);
         return true;
     }
@@ -230,32 +226,32 @@ bool compile_query_lt_gt(String_View original_src, String_View *src, Query *quer
         String_View key = sv_chop_while(src, not_end_of_query_token);
         if (sv_eq(key, sv_from_cstr("lt"))) {
             if (!compile_query_primary(original_src, src, query)) return false;
-            da_append(query, ((Op) { .kind_ = OP_LT, .src = *src, }));
+            da_append(query, op_lt(*src));
             continue;
         }
         if (sv_eq(key, sv_from_cstr("gt"))) {
             if (!compile_query_primary(original_src, src, query)) return false;
-            da_append(query, ((Op) { .kind_ = OP_GT, .src = *src, }));
+            da_append(query, op_gt(*src));
             continue;
         }
         if (sv_eq(key, sv_from_cstr("lte"))) {
             if (!compile_query_primary(original_src, src, query)) return false;
-            da_append(query, ((Op) { .kind_ = OP_LTE, .src = *src, }));
+            da_append(query, op_lte(*src));
             continue;
         }
         if (sv_eq(key, sv_from_cstr("gte"))) {
             if (!compile_query_primary(original_src, src, query)) return false;
-            da_append(query, ((Op) { .kind_ = OP_GTE, .src = *src, }));
+            da_append(query, op_gte(*src));
             continue;
         }
         if (sv_eq(key, sv_from_cstr("eq"))) {
             if (!compile_query_primary(original_src, src, query)) return false;
-            da_append(query, ((Op) { .kind_ = OP_EQ, .src = *src, }));
+            da_append(query, op_eq(*src));
             continue;
         }
         if (sv_eq(key, sv_from_cstr("neq"))) {
             if (!compile_query_primary(original_src, src, query)) return false;
-            da_append(query, ((Op) { .kind_ = OP_NEQ, .src = *src, }));
+            da_append(query, op_neq(*src));
             continue;
         }
         *src = saved_src;
@@ -280,7 +276,7 @@ bool compile_query_and(String_View original_src, String_View *src, Query *query)
             return true;
         }
         if (!compile_query_lt_gt(original_src, src, query)) return false;
-        da_append(query, ((Op) { .kind_ = OP_AND, .src = *src, }));
+        da_append(query, op_and(*src));
     }
     return true;
 }
@@ -301,7 +297,7 @@ bool compile_query_or(String_View original_src, String_View *src, Query *query)
             return true;
         }
         if (!compile_query_and(original_src, src, query)) return false;
-        da_append(query, ((Op) { .kind_ = OP_OR, .src = *src, }));
+        da_append(query, op_or(*src));
     }
     return true;
 }
@@ -350,4 +346,21 @@ const char *type_name(Type type)
     default:
         UNREACHABLE("type_name");
     }
+}
+
+Op op(Op_Kind kind, String_View src)
+{
+    return (Op) { .kind = kind, .src = src };
+}
+
+Op op_set_tag(Op op, String_View tag)
+{
+    op.as.tag = tag;
+    return op;
+}
+
+Op op_set_integer(Op op, long integer)
+{
+    op.as.integer = integer;
+    return op;
 }
