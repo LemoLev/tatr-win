@@ -25,4 +25,8 @@ char *path_render_cstr(String_Builder *sb, Path path);
 void path_parse(Path *path, String_View sv);
 void path_relative(Path *relative, Path current, Path target);
 
+bool test_path_normalize(void);
+bool test_path_parse_and_render(void);
+bool test_path_relative(void);
+
 #endif // PATH_H_

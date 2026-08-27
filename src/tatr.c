@@ -589,9 +589,10 @@ bool help_run(Command *self, const char *program_name, int argc, char **argv)
     print_available_commands(INFO);
     return true;
 }
-#ifndef TASKS_TEST
+
 int main(int argc, char **argv)
 {
+#ifndef TASKS_TEST
     const char *program_name = shift(argv, argc);
 
     if (argc <= 0) {
@@ -612,139 +613,15 @@ int main(int argc, char **argv)
     print_available_commands(ERROR);
     nob_log(ERROR, "Unknown command `%s`", command_name);
     return 1;
-}
-#else
-// TASK(20260825-195942): Move the relative path test into a separate unit
-int main(int argc, char **argv)
-{
+#else // TASKS_TEST
     UNUSED(argc);
     UNUSED(argv);
-
-    static struct {
-        const char *description;
-        const char *dst_path;
-        const char *src_path;
-        const char *rel_path;
-    } cases[] = {
-        {
-            .description = "At the root of the project",
-            .dst_path = "/home/rexim/Programming/tsoding/sofren/tasks",
-            .src_path = "/home/rexim/Programming/tsoding/sofren",
-            .rel_path = "./tasks",
-        },
-        {
-            .description = "At the root of the project, leading slash in dst_path",
-            .dst_path = "/home/rexim/Programming/tsoding/sofren/tasks/",
-            .src_path = "/home/rexim/Programming/tsoding/sofren",
-            .rel_path = "./tasks",
-        },
-        {
-            .description = "Same directory",
-            .dst_path = "/home/rexim/Programming/tsoding/sofren/tasks",
-            .src_path = "/home/rexim/Programming/tsoding/sofren/tasks",
-            .rel_path = ".",
-        },
-        {
-            .description = "Same directory but root",
-            .dst_path = "/",
-            .src_path = "/",
-            .rel_path = ".",
-        },
-        {
-            .description = "Same directory deeper",
-            .dst_path = "/home/rexim/Programming/tsoding/sofren/tasks",
-            .src_path = "/home/rexim/Programming/tsoding/sofren/tasks/20250831-161356/",
-            .rel_path = "..",
-        },
-        {
-            .description = "Sibling directory",
-            .dst_path = "/home/rexim/Programming/tsoding/sofren/tasks",
-            .src_path = "/home/rexim/Programming/tsoding/sofren/src",
-            .rel_path = "../tasks",
-        },
-        {
-            .description = "Sibling directory deeper",
-            .dst_path = "/home/rexim/Programming/tsoding/sofren/tasks",
-            .src_path = "/home/rexim/Programming/tsoding/sofren/src/game/",
-            .rel_path = "../../tasks",
-        },
-        {
-            .description = "Completely different path",
-            .dst_path = "/home/rexim/Programming/tsoding/sofren/tasks",
-            .src_path = "/home_/rexim/Programming/tsoding/sofren/tasks",
-            .rel_path = "../../../../../../home/rexim/Programming/tsoding/sofren/tasks",
-        },
-        {
-            .description = "Completely different path but opposite",
-            .dst_path = "/home_/rexim/Programming/tsoding/sofren/tasks",
-            .src_path = "/home/rexim/Programming/tsoding/sofren/tasks",
-            .rel_path = "../../../../../../home_/rexim/Programming/tsoding/sofren/tasks",
-        },
-        {
-            .description = "To the root",
-            .dst_path = "/",
-            .src_path = "/home/rexim/Programming/tsoding/sofren/tasks",
-            .rel_path = "../../../../../..",
-        },
-        {
-            .description = "From the root",
-            .dst_path = "/home/rexim/Programming/tsoding/sofren/tasks",
-            .src_path = "/",
-            .rel_path = "./home/rexim/Programming/tsoding/sofren/tasks",
-        },
-        {
-            .description = "20260321-181305",
-            .dst_path = "/home/rexim/Programming/tsoding/tatr/tasks",
-            .src_path = "/home/rexim/Programming/tsoding/tatr/thirdparty",
-            .rel_path = "../tasks",
-        },
-    };
-
-    Path dst_path          = {0};
-    Path src_path          = {0};
-    Path rel_path_expected = {0};
-    Path rel_path_actual   = {0};
-    String_Builder sb_path = {0};
-    bool record = false;
-    if (!record) {
-        // Replay
-        for (size_t i = 0; i < ARRAY_LEN(cases); ++i) {
-            const char *description = cases[i].description;
-            path_parse(&dst_path,          sv_from_cstr(cases[i].dst_path));
-            path_parse(&src_path,          sv_from_cstr(cases[i].src_path));
-            path_parse(&rel_path_expected, sv_from_cstr(cases[i].rel_path));
-            printf("%s ...", description);
-            fflush(stdout);
-            path_relative(&rel_path_actual, src_path, dst_path);
-            if (path_eq(rel_path_actual, rel_path_expected)) {
-                printf(" OK\n");
-            } else {
-                printf(" FAILED\n");
-                printf("  EXPECTED: %s\n", path_render_cstr(&sb_path, rel_path_expected));
-                printf("  ACTUAL:   %s\n", path_render_cstr(&sb_path, rel_path_actual));
-                abort();
-            }
-        }
-    } else {
-        // Record
-        printf("{\n");
-        for (size_t i = 0; i < ARRAY_LEN(cases); ++i) {
-            const char *description = cases[i].description;
-            path_parse(&dst_path, sv_from_cstr(cases[i].dst_path));
-            path_parse(&src_path, sv_from_cstr(cases[i].src_path));
-            path_relative(&rel_path_actual, src_path, dst_path);
-            printf("    {\n");
-            printf("        .description = \"%s\",\n", description);
-            printf("        .dst_path    = \"%s\",\n", path_render_cstr(&sb_path, dst_path));
-            printf("        .src_path    = \"%s\",\n", path_render_cstr(&sb_path, src_path));
-            printf("        .rel_path    = \"%s\",\n", path_render_cstr(&sb_path, rel_path_actual));
-            printf("    },\n");
-        }
-        printf("}\n");
-    }
+    if (!test_path_normalize())        return 1;
+    if (!test_path_parse_and_render()) return 1;
+    if (!test_path_relative())         return 1;
     return 0;
-}
 #endif // TASKS_TEST
+}
 
 #define NOB_IMPLEMENTATION
 #define NOB_OVERWRITE_TEMP_ON_REWIND

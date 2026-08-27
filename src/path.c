@@ -6,6 +6,7 @@
 void path_normalize(Path *dst, Path src)
 {
     // TASK(20260825-162925): double check with python that path_normalize is implemented correctly
+    dst->count = 0;
     for (size_t i = 0; i < src.count; ++i) {
         String_View sv = src.items[i];
         if (sv_eq(sv, sv_from_cstr("")) && i > 0) continue;
@@ -16,6 +17,50 @@ void path_normalize(Path *dst, Path src)
         }
         da_append(dst, sv);
     }
+}
+
+bool test_path_normalize(void)
+{
+    bool result = true;
+    Path src_path = {0};
+    Path dst_path = {0};
+    String_Builder sb_path = {0};
+
+    printf("%s ...", __func__);
+    fflush(stdout);
+
+    static struct {
+        const char *input;
+        const char *expected_output;
+    } cases[] = {
+        {
+            .input           = "/home//rexim/./Programming/tsoding/../probe/tatr/tasks/20260321-181305",
+            .expected_output = "/home/rexim/Programming/probe/tatr/tasks/20260321-181305",
+        },
+        {
+            .input           = "/hello///",
+            .expected_output = "/hello",
+        }
+    };
+
+    for (size_t i = 0; i < ARRAY_LEN(cases); ++i) {
+        path_parse(&src_path, sv_from_cstr(cases[i].input));
+        path_normalize(&dst_path, src_path);
+        const char *actual_output = path_render_cstr(&sb_path, dst_path);
+
+        if (strcmp(cases[i].expected_output, actual_output) != 0) {
+            printf(" FAILED\n");
+            printf("  EXPECTED: %s\n", cases[i].expected_output);
+            printf("  ACTUAL:   %s\n", actual_output);
+            return_defer(false);
+        }
+    }
+    printf(" OK\n");
+defer:
+    free(src_path.items);
+    free(dst_path.items);
+    free(sb_path.items);
+    return result;
 }
 
 void path_render(String_Builder *sb, Path path)
@@ -51,6 +96,41 @@ void path_parse(Path *path, String_View sv)
     }
 }
 
+bool test_path_parse_and_render(void)
+{
+    bool result = true;
+    Path path = {0};
+    String_Builder sb_path = {0};
+
+    static String_View cases[] = {
+        SVLIT_STATIC("/home"),
+        SVLIT_STATIC("/home/test"),
+        SVLIT_STATIC("home/test"),
+        SVLIT_STATIC("/"),
+        SVLIT_STATIC("home"),
+    };
+
+    printf("%s ...", __func__);
+    fflush(stdout);
+
+    for (size_t i = 0; i < ARRAY_LEN(cases); ++i) {
+        path_parse(&path, cases[i]);
+        path_render(&sb_path, path);
+        String_View output = sb_to_sv(sb_path);
+        if (!sv_eq(cases[i], output)) {
+            printf(" FAILED\n");
+            printf("  EXPECTED: "SV_Fmt"\n", SV_Arg(cases[i]));
+            printf("  ACTUAL:   "SV_Fmt"\n", SV_Arg(output));
+            return_defer(false);
+        }
+    }
+    printf(" OK\n");
+defer:
+    free(path.items);
+    free(sb_path.items);
+    return result;
+}
+
 void path_relative(Path *rel, Path src, Path dst)
 {
     // Both paths are expected to be absolute and normalized
@@ -77,60 +157,107 @@ void path_relative(Path *rel, Path src, Path dst)
     }
 }
 
-// TASK(20260825-195942): Move the relative path test into a separate unit
-static void test_path(void)
+bool test_path_relative(void)
 {
-    printf("------------------------------\n");
+    bool result = true;
 
-    // Normalization
-    {
-        const char *s = "/home//rexim/./Programming/tsoding/../probe/tatr/tasks/20260321-181305";
-        Path src_path = {0};
-        Path dst_path = {0};
-        String_Builder sb = {0};
+    Path dst_path          = {0};
+    Path src_path          = {0};
+    Path rel_path_expected = {0};
+    Path rel_path_actual   = {0};
+    String_Builder sb_path = {0};
 
-        path_parse(&src_path, sv_from_cstr(s));
-        path_normalize(&dst_path, src_path);
-        path_render(&sb, dst_path);
-        sb_append_null(&sb);
+    static struct {
+        const char *dst_path;
+        const char *src_path;
+        const char *rel_path;
+    } cases[] = {
+        {
+            .dst_path = "/home/rexim/Programming/tsoding/sofren/tasks",
+            .src_path = "/home/rexim/Programming/tsoding/sofren",
+            .rel_path = "./tasks",
+        },
+        {
+            .dst_path = "/home/rexim/Programming/tsoding/sofren/tasks/",
+            .src_path = "/home/rexim/Programming/tsoding/sofren",
+            .rel_path = "./tasks",
+        },
+        {
+            .dst_path = "/home/rexim/Programming/tsoding/sofren/tasks",
+            .src_path = "/home/rexim/Programming/tsoding/sofren/tasks",
+            .rel_path = ".",
+        },
+        {
+            .dst_path = "/",
+            .src_path = "/",
+            .rel_path = ".",
+        },
+        {
+            .dst_path = "/home/rexim/Programming/tsoding/sofren/tasks",
+            .src_path = "/home/rexim/Programming/tsoding/sofren/tasks/20250831-161356/",
+            .rel_path = "..",
+        },
+        {
+            .dst_path = "/home/rexim/Programming/tsoding/sofren/tasks",
+            .src_path = "/home/rexim/Programming/tsoding/sofren/src",
+            .rel_path = "../tasks",
+        },
+        {
+            .dst_path = "/home/rexim/Programming/tsoding/sofren/tasks",
+            .src_path = "/home/rexim/Programming/tsoding/sofren/src/game/",
+            .rel_path = "../../tasks",
+        },
+        {
+            .dst_path = "/home/rexim/Programming/tsoding/sofren/tasks",
+            .src_path = "/home_/rexim/Programming/tsoding/sofren/tasks",
+            .rel_path = "../../../../../../home/rexim/Programming/tsoding/sofren/tasks",
+        },
+        {
+            .dst_path = "/home_/rexim/Programming/tsoding/sofren/tasks",
+            .src_path = "/home/rexim/Programming/tsoding/sofren/tasks",
+            .rel_path = "../../../../../../home_/rexim/Programming/tsoding/sofren/tasks",
+        },
+        {
+            .dst_path = "/",
+            .src_path = "/home/rexim/Programming/tsoding/sofren/tasks",
+            .rel_path = "../../../../../..",
+        },
+        {
+            .dst_path = "/home/rexim/Programming/tsoding/sofren/tasks",
+            .src_path = "/",
+            .rel_path = "./home/rexim/Programming/tsoding/sofren/tasks",
+        },
+        {
+            .dst_path = "/home/rexim/Programming/tsoding/tatr/tasks",
+            .src_path = "/home/rexim/Programming/tsoding/tatr/thirdparty",
+            .rel_path = "../tasks",
+        },
+    };
 
-        printf("%s\n", s);
-        printf("%s\n", sb.items);
-    }
+    printf("%s ...", __func__);
+    fflush(stdout);
 
-    printf("------------------------------\n");
-
-    // Rendering
-    if (1) {
-        String_View cases[] = {
-            SVLIT_STATIC("/home"),
-            SVLIT_STATIC("/home/test"),
-            SVLIT_STATIC("home/test"),
-            SVLIT_STATIC("/"),
-            SVLIT_STATIC("home"),
-        };
-
-        Path path = {0};
-        String_Builder sb = {0};
-        for (size_t i = 0; i < ARRAY_LEN(cases); ++i) {
-            if (i > 0) printf("\n");
-            path_parse(&path, cases[i]);
-            printf("original = \""SV_Fmt"\"\n", SV_Arg(cases[i]));
-            printf("rendered = \"%s\"\n", path_render_cstr(&sb, path));
+    for (size_t i = 0; i < ARRAY_LEN(cases); ++i) {
+        path_parse(&dst_path,          sv_from_cstr(cases[i].dst_path));
+        path_parse(&src_path,          sv_from_cstr(cases[i].src_path));
+        path_parse(&rel_path_expected, sv_from_cstr(cases[i].rel_path));
+        path_relative(&rel_path_actual, src_path, dst_path);
+        if (!path_eq(rel_path_actual, rel_path_expected)) {
+            printf(" FAILED\n");
+            printf("  EXPECTED: %s\n", path_render_cstr(&sb_path, rel_path_expected));
+            printf("  ACTUAL:   %s\n", path_render_cstr(&sb_path, rel_path_actual));
+            return_defer(false);
         }
     }
 
-    printf("------------------------------\n");
-
-    {
-        Path path = {0};
-        Path norm = {0};
-        path_parse(&path, SVLIT("/hello///"));
-        path_normalize(&norm, path);
-        da_foreach(String_View, item, &norm) {
-            printf("\"" SV_Fmt "\"\n", SV_Arg(*item));
-        }
-    }
+    printf(" OK\n");
+defer:
+    free(dst_path.items);
+    free(src_path.items);
+    free(rel_path_expected.items);
+    free(rel_path_actual.items);
+    free(sb_path.items);
+    return result;
 }
 
 bool path_eq(Path a, Path b)
