@@ -5,17 +5,16 @@
 - TAGS: release
 
 I usually don't put anything unusual into TASK.md myself, but other
-people can. So I need to test how it all works on random junk.
+people might. So I need to test how it all works on random junk.
 
----
+## Problems to fix in this issue
 
-I guess what worries me the most is inability of our parser to parse things like:
+### If `TAGS` is missing and the body starts with a list item, the parser thinks we provided an invalid property.
 
 ```
 # title
 - STATUS: OPEN
 - PRIORITY: 69
-- TAGS: scope
 
 - foo
 - bar
@@ -23,3 +22,11 @@ I guess what worries me the most is inability of our parser to parse things like
 ```
 
 It thinks `foo` is another property and fails. Not sure what to do about this.
+
+### Properties can be defined only in a specific order.
+
+Huge oversight. Should allow properties in any order and also
+duplicated properties. In case of duplicates take the value of the
+last one.
+
+Unsupported properties should be probably just ignored.
