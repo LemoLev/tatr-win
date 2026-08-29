@@ -2,7 +2,7 @@
 
 - STATUS: OPEN
 - PRIORITY: 100
-- TAGS: release
+- TAGS:
 
 Cephon wanted to kanban this whole thing. I guess we could've just
 treated any not "CLOSED" status as opened and let the user put
@@ -43,3 +43,14 @@ can't be `OPEN` and `CLOSED` simultaneously.
 Having `STATUS` being another tag messes with `tatr-summary` command:
 
 ![2026-08-29-163436_1106x308_scrot.png](./2026-08-29-163436_1106x308_scrot.png)
+
+---
+
+For now I just implemented so when the status is not "CLOSED" it's
+considered "OPEN". No filtering by specific status string is provided
+because status can be only either "OPEN" or "CLOSED". An invalid
+status string is treated as "OPEN" purely for convenience so the user
+doesn't lose the invalid task from their sight.
+
+I'm unscheduling this task from the release. Will see what can be done
+in here later.

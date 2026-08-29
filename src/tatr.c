@@ -154,7 +154,11 @@ bool ls_run(Command *self, const char *program_name, int argc, char **argv)
 
     size_t tasks_matched = 0;
     da_foreach(Task, task, &tasks) {
-        if (!sv_eq(task->status, closed ? SVLIT("CLOSED") : SVLIT("OPEN"))) continue;
+        if (closed) {
+            if (!sv_eq(task->status, SVLIT("CLOSED"))) continue;
+        } else {
+            if (sv_eq(task->status, SVLIT("CLOSED"))) continue;
+        }
         switch (task_matches_query(original_src, task, query, &stack)) {
         case TMR_MATCHED:    break;
         case TMR_MISMATCHED: continue;
