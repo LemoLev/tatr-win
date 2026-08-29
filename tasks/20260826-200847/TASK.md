@@ -32,3 +32,8 @@ use tags for that?
 `STATUS` is just yet another tag. What we just consider a task closed
 if it has tag `CLOSED` and for backward compatibility, during the
 parsing just append the value of `STATUS` to the `TAGS` list?
+
+---
+
+One advantage a separate `STATUS` property gives is that the task
+can't be `OPEN` and `CLOSED` simultaneously.
