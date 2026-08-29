@@ -72,13 +72,13 @@ Query language is used in `tatr ls` command to select a set of tasks.
 Query everything with tag `bug`:
 
 ```console
-$ tatr ls .bug
+$ tatr ls :bug
 ```
 
 Everything with tag `bug`, but without tag `ui`:
 
 ```console
-$ tatr ls .bug and not .ui
+$ tatr ls :bug and not :ui
 ```
 
 Everything that is not tagged:
@@ -90,7 +90,7 @@ $ tatr ls not tagged
 All the bugs with priority less than 50:
 
 ```console
-$ tatr ls .bug and priority lt 50
+$ tatr ls :bug and priority lt 50
 ```
 
 #### Syntax
@@ -109,7 +109,7 @@ Here is the [Backus–Naur form](https://en.wikipedia.org/wiki/Backus%E2%80%93Na
             | 'tagged'
             | 'priority'
             | <number>
-<tag>     ::= '.' 1*<any character except ','>
+<tag>     ::= ':' 1*<any character except ','>
 <number>  ::= ['-'] 1*<digit>
 ```
 
@@ -119,7 +119,7 @@ Here is the [Backus–Naur form](https://en.wikipedia.org/wiki/Backus%E2%80%93Na
 |-|-|
 | `<expr1:bool> or <expr2:bool>` | True when `<expr1:bool>` or `<expr2:bool>` or both are true. Just a regular [logical disjunction](https://en.wikipedia.org/wiki/Logical_disjunction). |
 | `<expr1:bool> and <expr2:bool>` | True when both `<expr1:bool>` and `<expr2:bool>` are true. Just a regular [logical conjunction](https://en.wikipedia.org/wiki/Logical_conjunction) |
-| `.<tag>` | True when a task's `TAGS` property contains `<tag>` |
+| `:<tag>` | True when a task's `TAGS` property contains `<tag>` |
 | `not <expr:bool>` | True when `<expr:bool>` is false. |
 | `tagged` | True when a task has at least one tag in its `TAGS` property. |
 | `any` | Always true for any task. |

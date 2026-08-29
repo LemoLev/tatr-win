@@ -101,7 +101,7 @@ bool assert_test_output(const char *output_label, String_View expected_stdout, S
 bool test_ls_query_negation_of_complex_expression_in_parens(Test_Runner *r)
 {
     nob_log(INFO, "Running %s...", __func__);
-    if (!run_query_payload(r, "not (tagged or .bug and .test and .foo and .bar)")) return false;
+    if (!run_query_payload(r, "not (tagged or :bug and :test and :foo and :bar)")) return false;
     if (!expect_success(r)) return false;
     if (!assert_test_output(
         "STDOUT",
@@ -125,7 +125,7 @@ bool test_ls_query_negation_of_complex_expression_in_parens(Test_Runner *r)
 bool test_ls_query_not_stuck_to_open_paren(Test_Runner *r)
 {
     nob_log(INFO, "Running %s...", __func__);
-    if (!run_query_payload(r, "not(.bug and .test) and .query")) return false;
+    if (!run_query_payload(r, "not(:bug and :test) and :query")) return false;
     if (!expect_success(r)) return false;
     if (!assert_test_output(
         "STDOUT",
@@ -145,13 +145,13 @@ bool test_ls_query_not_stuck_to_open_paren(Test_Runner *r)
 bool test_ls_query_report_error_utf8(Test_Runner *r)
 {
     nob_log(INFO, "Running %s...", __func__);
-    if (!run_query_payload(r, ".привет hello")) return false;
+    if (!run_query_payload(r, ":привет hello")) return false;
     if (!expect_failure(r)) return false;
     if (!assert_test_output("STDOUT", (String_View){0}, sb_to_sv(r->sb_stdout))) return false;
     if (!assert_test_output(
         "STDERR",
         sv_from_cstr(
-            ".привет hello\n"
+            ":привет hello\n"
             "        ^\n"
             "ERROR: Expected keywords `and`, or `or`\n"),
         sb_to_sv(r->sb_stderr))) return false;

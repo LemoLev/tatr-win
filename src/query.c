@@ -1,6 +1,6 @@
 #include "query.h"
 
-void report_compile_query_error(String_View original_src, const String_View *src, const char *format, ...) NOB_PRINTF_FORMAT(3, 4);
+void report_compile_query_diagnostic(String_View original_src, const String_View *src, const char *format, ...) NOB_PRINTF_FORMAT(3, 4);
 
 static int not_end_of_query_token(int x)
 {
@@ -32,7 +32,7 @@ bool pop_type(String_View original_src, Stack *stack, Type type, Stack_Item *ite
 {
     *item = da_pop(stack);
     if (item->type != type) {
-        report_compile_query_error(original_src, &item->src, "Expected %s but got %s", type_name(type), type_name(item->type));
+        report_compile_query_diagnostic(original_src, &item->src, "ERROR: Expected %s but got %s", type_name(type), type_name(item->type));
         return false;
     }
     return true;
@@ -133,7 +133,7 @@ Task_Match_Result task_matches_query(String_View original_src, const Task *task,
     return TMR_MISMATCHED;
 }
 
-void report_compile_query_error(String_View original_src, const String_View *src, const char *format, ...)
+void report_compile_query_diagnostic(String_View original_src, const String_View *src, const char *format, ...)
 {
     int cursor = sv_utf8_len((String_View) {
         .data = original_src.data,
@@ -141,7 +141,6 @@ void report_compile_query_error(String_View original_src, const String_View *src
     }, NULL) + 1;
     fprintf(stderr, SV_Fmt"\n", SV_Arg(original_src));
     fprintf(stderr, "%*s\n", cursor, "^");
-    fprintf(stderr, "ERROR: ");
     va_list args;
     va_start(args, format);
     vfprintf(stderr, format, args);
@@ -155,10 +154,15 @@ bool compile_query_primary(String_View original_src, String_View *src, Query *qu
 {
     *src = sv_trim_left(*src);
     if (src->count == 0) {
-        report_compile_query_error(original_src, src, "Expected `.`, `(`, `not`, `any`, or `tagged`.");
+        report_compile_query_diagnostic(original_src, src, "ERROR: Expected `:`, `(`, `not`, `any`, or `tagged`.");
         return false;
     }
-    if (*src->data == '.') {
+    // We used to use dot to refer to a tag before. We still accept it for backward compatibility.
+    // But we may remove it at some point in the future.
+    if (*src->data == '.' || *src->data == ':') {
+        if (*src->data == '.') {
+            report_compile_query_diagnostic(original_src, src, "WARNING: Using `.` to refer to tags is deprecated and will be removed in the future. Use `:` instead.");
+        }
         sv_chop_left(src, 1);
         String_View tag = sv_chop_while(src, not_end_of_query_token);
         da_append(query, op_tag(*src, tag));
@@ -169,7 +173,7 @@ bool compile_query_primary(String_View original_src, String_View *src, Query *qu
         if (!compile_query_expr(original_src, src, query)) return false;
         *src = sv_trim_left(*src);
         if (!sv_starts_with(*src, sv_from_cstr(")"))) {
-            report_compile_query_error(original_src, src, "Expected `)`.");
+            report_compile_query_diagnostic(original_src, src, "ERROR: Expected `)`.");
             return false;
         }
         sv_chop_left(src, 1);
@@ -208,9 +212,9 @@ bool compile_query_primary(String_View original_src, String_View *src, Query *qu
 
     *src = saved_src;
     if (key.count == 0) {
-        report_compile_query_error(original_src, src, "Expected `.`, `(`, `not`, `any`, `tagged`, or `priority`.");
+        report_compile_query_diagnostic(original_src, src, "ERROR: Expected `:`, `(`, `not`, `any`, `tagged`, or `priority`.");
     } else {
-        report_compile_query_error(original_src, src, "Unknown keyword `"SV_Fmt"`. Expected keywords `not`, `any`, `tagged`, or `priority`.", SV_Arg(key));
+        report_compile_query_diagnostic(original_src, src, "ERROR: Unknown keyword `"SV_Fmt"`. Expected keywords `not`, `any`, `tagged`, or `priority`.", SV_Arg(key));
     }
     return false;
 }
@@ -313,7 +317,7 @@ bool compile_query(String_View original_src, String_View *src, Query *query)
     if (!compile_query_expr(original_src, src, query)) return false;
     *src = sv_trim_left(*src);
     if (src->count != 0) {
-        report_compile_query_error(original_src, src, "Expected keywords `and`, or `or`");
+        report_compile_query_diagnostic(original_src, src, "ERROR: Expected keywords `and`, or `or`");
         return false;
     }
     return true;
