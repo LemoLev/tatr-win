@@ -226,41 +226,26 @@ bool compile_query_primary(String_View original_src, String_View *src, Query *qu
 
 bool compile_query_compare(String_View original_src, String_View *src, Query *query)
 {
-    // <expr> [(lt|gt|lte|gte|eq|below|above|not below|not above|equal|not equal) <expr>]*
+    // <expr> [<compare> <expr>]*
     if (!compile_query_primary(original_src, src, query)) return false;
     for (;;) {
         *src = sv_trim_left(*src);
         if (src->count == 0) break;
         String_View saved_src = *src;
         String_View key = sv_chop_while(src, not_end_of_query_token);
-        if (sv_eq(key, sv_from_cstr("lt")) || sv_eq(key, sv_from_cstr("below"))) {
+        if (sv_eq(key, sv_from_cstr("below"))) {
             if (!compile_query_primary(original_src, src, query)) return false;
             da_append(query, op_lt(*src));
             continue;
         }
-        if (sv_eq(key, sv_from_cstr("gt")) || sv_eq(key, sv_from_cstr("above"))) {
+        if (sv_eq(key, sv_from_cstr("above"))) {
             if (!compile_query_primary(original_src, src, query)) return false;
             da_append(query, op_gt(*src));
             continue;
         }
-        if (sv_eq(key, sv_from_cstr("lte"))) {
-            if (!compile_query_primary(original_src, src, query)) return false;
-            da_append(query, op_lte(*src));
-            continue;
-        }
-        if (sv_eq(key, sv_from_cstr("gte"))) {
-            if (!compile_query_primary(original_src, src, query)) return false;
-            da_append(query, op_gte(*src));
-            continue;
-        }
-        if (sv_eq(key, sv_from_cstr("eq")) || sv_eq(key, sv_from_cstr("equal"))) {
+        if (sv_eq(key, sv_from_cstr("equal"))) {
             if (!compile_query_primary(original_src, src, query)) return false;
             da_append(query, op_eq(*src));
-            continue;
-        }
-        if (sv_eq(key, sv_from_cstr("neq"))) {
-            if (!compile_query_primary(original_src, src, query)) return false;
-            da_append(query, op_neq(*src));
             continue;
         }
         if (sv_eq(key, sv_from_cstr("not"))) {

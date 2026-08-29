@@ -159,10 +159,10 @@ bool test_ls_query_report_error_utf8(Test_Runner *r)
     return true;
 }
 
-bool test_ls_query_priority_gt_20(Test_Runner *r)
+bool test_ls_query_priority_above_20(Test_Runner *r)
 {
     nob_log(INFO, "Running %s...", __func__);
-    if (!run_query_payload(r, "priority gt 20")) return false;
+    if (!run_query_payload(r, "priority above 20")) return false;
     if (!expect_success(r)) return false;
     if (!assert_test_output(
         "STDOUT",
@@ -355,7 +355,7 @@ int main(int argc, char **argv)
         if (!test_ls_query_negation_of_complex_expression_in_parens(&r)) return 1;
         if (!test_ls_query_not_stuck_to_open_paren(&r)) return 1;
         if (!test_ls_query_report_error_utf8(&r)) return 1;
-        if (!test_ls_query_priority_gt_20(&r)) return 1;
+        if (!test_ls_query_priority_above_20(&r)) return 1;
         if (!test_ls_query_only_matching_brackets(&r)) return 1;
     }
 
