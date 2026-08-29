@@ -37,3 +37,9 @@ parsing just append the value of `STATUS` to the `TAGS` list?
 
 One advantage a separate `STATUS` property gives is that the task
 can't be `OPEN` and `CLOSED` simultaneously.
+
+---
+
+Having `STATUS` being another tag messes with `tatr-summary` command:
+
+![2026-08-29-163436_1106x308_scrot.png](./2026-08-29-163436_1106x308_scrot.png)
