@@ -16,3 +16,8 @@ And we want it to be a separate command because it is very common to
 have such folders while using git because git doesn't track
 folders. So you may accidentally create a task. Then discard TASK.md
 leaving behind an empty task folder.
+
+---
+
+As we discovered in 20260826-152351 it's better to just incorporate
+all these weird folders in a loud screaming way like we do in sowon2.

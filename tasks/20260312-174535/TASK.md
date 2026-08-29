@@ -2,6 +2,6 @@
 
 - STATUS: CLOSED
 - PRIORITY: 100
-- TAGS: release,scope
+- TAGS: release
 
 No description.
