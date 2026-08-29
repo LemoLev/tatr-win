@@ -179,6 +179,42 @@ bool test_ls_query_priority_gt_20(Test_Runner *r)
     return true;
 }
 
+bool test_ls_query_only_matching_brackets(Test_Runner *r)
+{
+    nob_log(INFO, "Running %s...", __func__);
+
+    if (!run_query_payload(r, "not [:bug or :release)")) return false;
+    if (!expect_failure(r)) return false;
+    if (!assert_test_output(
+        "STDOUT",
+        SVLIT(""),
+        sb_to_sv(r->sb_stdout))) return false;
+    if (!assert_test_output(
+        "STDERR",
+        SVLIT(
+            "not [:bug or :release)\n"
+            "                     ^\n"
+            "ERROR: Expected `]`.\n"),
+        sb_to_sv(r->sb_stderr))) return false;
+
+    if (!run_query_payload(r, "not (:bug or :release]")) return false;
+    if (!expect_failure(r)) return false;
+    if (!assert_test_output(
+        "STDOUT",
+        SVLIT(""),
+        sb_to_sv(r->sb_stdout))) return false;
+    if (!assert_test_output(
+        "STDERR",
+        SVLIT(
+            "not (:bug or :release]\n"
+            "                     ^\n"
+            "ERROR: Expected `)`.\n"),
+        sb_to_sv(r->sb_stderr))) return false;
+
+    nob_log(INFO, "OK");
+    return true;
+}
+
 void cc(Cmd *cmd, Compiler compiler)
 {
     static_assert(__compiler_count == 4, "Amount of compilers have changed");
@@ -320,6 +356,7 @@ int main(int argc, char **argv)
         if (!test_ls_query_not_stuck_to_open_paren(&r)) return 1;
         if (!test_ls_query_report_error_utf8(&r)) return 1;
         if (!test_ls_query_priority_gt_20(&r)) return 1;
+        if (!test_ls_query_only_matching_brackets(&r)) return 1;
     }
 
     if (run) {

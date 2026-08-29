@@ -104,6 +104,7 @@ Here is the [Backus–Naur form](https://en.wikipedia.org/wiki/Backus%E2%80%93Na
 <compare> ::= <primary> *(('lt'|'gt'|'lte'|'gte'|'eq'|'neq') <primary>)
 <primary> ::= <tag>
             | '(' <expr> ')'
+            | '[' <expr> ']'
             | 'not' <expr>
             | 'any'
             | 'tagged'

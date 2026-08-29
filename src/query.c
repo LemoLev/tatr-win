@@ -4,7 +4,7 @@ void report_compile_query_diagnostic(String_View original_src, const String_View
 
 static int not_end_of_query_token(int x)
 {
-    return x != ' ' && x != ')' && x != '(';
+    return x != ' ' && x != ')' && x != '(' && x != ']' && x != '[';
 }
 
 void print_op(Op op)
@@ -168,12 +168,17 @@ bool compile_query_primary(String_View original_src, String_View *src, Query *qu
         da_append(query, op_tag(*src, tag));
         return true;
     }
-    if (*src->data == '(') {
+    if (*src->data == '(' || *src->data == '[') {
+        char start = *src->data;
         sv_chop_left(src, 1);
         if (!compile_query_expr(original_src, src, query)) return false;
         *src = sv_trim_left(*src);
-        if (!sv_starts_with(*src, sv_from_cstr(")"))) {
+        if (start == '(' && !sv_starts_with(*src, sv_from_cstr(")"))) {
             report_compile_query_diagnostic(original_src, src, "ERROR: Expected `)`.");
+            return false;
+        }
+        if (start == '[' && !sv_starts_with(*src, sv_from_cstr("]"))) {
+            report_compile_query_diagnostic(original_src, src, "ERROR: Expected `]`.");
             return false;
         }
         sv_chop_left(src, 1);

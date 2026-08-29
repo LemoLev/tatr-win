@@ -1,8 +1,8 @@
 # Parenthesis in Bash have a special meaning which makes them really annoying to use in the Query Language for grouping
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 100
-- TAGS: release
+- TAGS:
 
 Maybe allow square brackets as an alternative
 
