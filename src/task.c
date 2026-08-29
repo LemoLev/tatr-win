@@ -17,10 +17,13 @@ void append_task_md_content(String_Builder *sb, Task task)
     sb_appendf(sb, "\n");
     sb_appendf(sb, "- STATUS: "SV_Fmt"\n", SV_Arg(task.status));
     sb_appendf(sb, "- PRIORITY: %d\n", task.priority);
-    sb_appendf(sb, "- TAGS: ");
-    for (size_t i = 0; i < task.tags.count; ++i) {
-        if (i > 0) sb_appendf(sb, ",");
-        sb_append_buf(sb, task.tags.items[i].data, task.tags.items[i].count);
+    sb_appendf(sb, "- TAGS:");
+    if (task.tags.count) {
+        sb_appendf(sb, " ");
+        for (size_t i = 0; i < task.tags.count; ++i) {
+            if (i > 0) sb_appendf(sb, ",");
+            sb_append_buf(sb, task.tags.items[i].data, task.tags.items[i].count);
+        }
     }
     sb_appendf(sb, "\n");
     sb_appendf(sb, "\n");
