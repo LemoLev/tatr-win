@@ -1,6 +1,6 @@
 # The way `tatr-ls` constructs queries is confusing
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 100
 - TAGS: release
 
@@ -17,3 +17,8 @@ properly documented.
 
 Same will go for any future commands that accept queries (see
 20260828-211200).
+
+---
+
+I feel like `tatr-new` has a similar problem but with titles. We need
+to double check on that.

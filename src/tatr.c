@@ -109,20 +109,18 @@ bool ls_run(Command *self, const char *program_name, int argc, char **argv)
     flag_c_bool_var(c, &debug, "debug", false, "Output opcodes of the query for debug purpose");
     flag_c_bool_var(c, &help, "help", false, "Print this help message");
 
+    if (!flag_c_parse(c, argc, argv)) {
+        print_command_usage(self, program_name, c);
+        flag_c_print_error(c, stderr);
+        return false;
+    }
+
+    argc = flag_c_rest_argc(c);
+    argv = flag_c_rest_argv(c);
+
     while (argc > 0) {
-        if (!flag_c_parse(c, argc, argv)) {
-            print_command_usage(self, program_name, c);
-            flag_c_print_error(c, stderr);
-            return false;
-        }
-
-        argc = flag_c_rest_argc(c);
-        argv = flag_c_rest_argv(c);
-
-        if (argc > 0) {
-            if (query_src.count > 0) sb_append(&query_src, ' ');
-            sb_append_cstr(&query_src, shift(argv, argc));
-        }
+        if (query_src.count > 0) sb_append(&query_src, ' ');
+        sb_append_cstr(&query_src, shift(argv, argc));
     }
 
     if (help) {
@@ -189,20 +187,18 @@ bool new_run(Command *self, const char *program_name, int argc, char **argv)
     flag_c_bool_var(c, &help, "help", false, "Print this help message");
     String_Builder sb_title = {0};
 
+    if (!flag_c_parse(c, argc, argv)) {
+        print_command_usage(self, program_name, c);
+        flag_c_print_error(c, stderr);
+        return false;
+    }
+
+    argc = flag_c_rest_argc(c);
+    argv = flag_c_rest_argv(c);
+
     while (argc > 0) {
-        if (!flag_c_parse(c, argc, argv)) {
-            print_command_usage(self, program_name, c);
-            flag_c_print_error(c, stderr);
-            return false;
-        }
-
-        argc = flag_c_rest_argc(c);
-        argv = flag_c_rest_argv(c);
-
-        if (argc > 0) {
-            if (sb_title.count > 0) sb_append(&sb_title, ' ');
-            sb_append_cstr(&sb_title, shift(argv, argc));
-        }
+        if (sb_title.count > 0) sb_append(&sb_title, ' ');
+        sb_append_cstr(&sb_title, shift(argv, argc));
     }
 
     if (help) {
@@ -531,13 +527,13 @@ Command commands[] = {
     },
     {
         .name = "ls",
-        .signature = "[OPTIONS]",
+        .signature = "[OPTIONS] [QUERY...]",
         .description = "List the tasks",
         .run = ls_run,
     },
     {
         .name = "new",
-        .signature = "[TITLE...] [OPTIONS]",
+        .signature = "[OPTIONS] [TITLE...]",
         .description = "Create a new task",
         .run = new_run,
     },
