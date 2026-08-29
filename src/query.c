@@ -224,21 +224,21 @@ bool compile_query_primary(String_View original_src, String_View *src, Query *qu
     return false;
 }
 
-bool compile_query_lt_gt(String_View original_src, String_View *src, Query *query)
+bool compile_query_compare(String_View original_src, String_View *src, Query *query)
 {
-    // <expr> [(lt|gt|lte|gte|eq) <expr>]*
+    // <expr> [(lt|gt|lte|gte|eq|below|above|not below|not above|equal|not equal) <expr>]*
     if (!compile_query_primary(original_src, src, query)) return false;
     for (;;) {
         *src = sv_trim_left(*src);
         if (src->count == 0) break;
         String_View saved_src = *src;
         String_View key = sv_chop_while(src, not_end_of_query_token);
-        if (sv_eq(key, sv_from_cstr("lt"))) {
+        if (sv_eq(key, sv_from_cstr("lt")) || sv_eq(key, sv_from_cstr("below"))) {
             if (!compile_query_primary(original_src, src, query)) return false;
             da_append(query, op_lt(*src));
             continue;
         }
-        if (sv_eq(key, sv_from_cstr("gt"))) {
+        if (sv_eq(key, sv_from_cstr("gt")) || sv_eq(key, sv_from_cstr("above"))) {
             if (!compile_query_primary(original_src, src, query)) return false;
             da_append(query, op_gt(*src));
             continue;
@@ -253,7 +253,7 @@ bool compile_query_lt_gt(String_View original_src, String_View *src, Query *quer
             da_append(query, op_gte(*src));
             continue;
         }
-        if (sv_eq(key, sv_from_cstr("eq"))) {
+        if (sv_eq(key, sv_from_cstr("eq")) || sv_eq(key, sv_from_cstr("equal"))) {
             if (!compile_query_primary(original_src, src, query)) return false;
             da_append(query, op_eq(*src));
             continue;
@@ -262,6 +262,28 @@ bool compile_query_lt_gt(String_View original_src, String_View *src, Query *quer
             if (!compile_query_primary(original_src, src, query)) return false;
             da_append(query, op_neq(*src));
             continue;
+        }
+        if (sv_eq(key, sv_from_cstr("not"))) {
+            *src = sv_trim_left(*src);
+            saved_src = *src;
+            key = sv_chop_while(src, not_end_of_query_token);
+            if (sv_eq(key, SVLIT("above"))) {
+                if (!compile_query_primary(original_src, src, query)) return false;
+                da_append(query, op_lte(*src));
+                continue;
+            }
+            if (sv_eq(key, SVLIT("below"))) {
+                if (!compile_query_primary(original_src, src, query)) return false;
+                da_append(query, op_gte(*src));
+                continue;
+            }
+            if (sv_eq(key, SVLIT("equal"))) {
+                if (!compile_query_primary(original_src, src, query)) return false;
+                da_append(query, op_neq(*src));
+                continue;
+            }
+            report_compile_query_diagnostic(original_src, &saved_src, "ERROR: Expected keywords `above`, `below`, or `equal`");
+            return false;
         }
         *src = saved_src;
         break;
@@ -272,7 +294,7 @@ bool compile_query_lt_gt(String_View original_src, String_View *src, Query *quer
 bool compile_query_and(String_View original_src, String_View *src, Query *query)
 {
     // <expr> [and <expr>]*
-    if (!compile_query_lt_gt(original_src, src, query)) return false;
+    if (!compile_query_compare(original_src, src, query)) return false;
     for (;;) {
         *src = sv_trim_left(*src);
         if (src->count == 0) {
@@ -284,7 +306,7 @@ bool compile_query_and(String_View original_src, String_View *src, Query *query)
             *src = saved_src;
             return true;
         }
-        if (!compile_query_lt_gt(original_src, src, query)) return false;
+        if (!compile_query_compare(original_src, src, query)) return false;
         da_append(query, op_and(*src));
     }
     return true;
@@ -322,6 +344,7 @@ bool compile_query(String_View original_src, String_View *src, Query *query)
     if (!compile_query_expr(original_src, src, query)) return false;
     *src = sv_trim_left(*src);
     if (src->count != 0) {
+        // TASK(20260829-221717): we actually expect much more infix keywords when the expression is not fully parsed
         report_compile_query_diagnostic(original_src, src, "ERROR: Expected keywords `and`, or `or`");
         return false;
     }

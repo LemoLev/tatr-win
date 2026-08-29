@@ -2,7 +2,7 @@
 
 - STATUS: OPEN
 - PRIORITY: 100
-- TAGS: release
+- TAGS: release,scope
 
 ## NOTE(20260829-200429)
 
@@ -25,3 +25,9 @@ of Shell-like environments.
 - `not equal`
 
 It was also suggested in the Discord to consider things like `at least`
+
+## NOTE(20260829-221229)
+
+The ability to type `not above` implies the ability to type `not lt`,
+`not gt`, etc. which makes it even more lame. Maybe we should just
+remove the weird lame comparison operators as early as possible.

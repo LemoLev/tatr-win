@@ -98,20 +98,23 @@ $ tatr ls :bug and priority lt 50
 Here is the [Backus–Naur form](https://en.wikipedia.org/wiki/Backus%E2%80%93Naur_form) of the language:
 
 ```
-<expr>    ::= <or>
-<or>      ::= <and> *('or' <and>)
-<and>     ::= <compare> *('and' <compare>)
-<compare> ::= <primary> *(('lt'|'gt'|'lte'|'gte'|'eq'|'neq') <primary>)
-<primary> ::= <tag>
-            | '(' <expr> ')'
-            | '[' <expr> ']'
-            | 'not' <expr>
-            | 'any'
-            | 'tagged'
-            | 'priority'
-            | <number>
-<tag>     ::= ':' 1*<any character except ','>
-<number>  ::= ['-'] 1*<digit>
+<expr>            ::= <or>
+<or>              ::= <and> *('or' <and>)
+<and>             ::= <compare> *('and' <compare>)
+<compare>         ::= <primary> *(<compare-op> <primary>)
+<compare-op>      ::= <compare-weird> | <compare-natural>
+<compare-weird>   ::= 'lt' | 'gt' | 'lte' |'gte' | 'eq' | 'neq'
+<compare-natural> ::= 'below' | 'above' | equal | 'not' 'below' | 'not' 'above' | 'not' 'equal'
+<primary>         ::= <tag>
+                    | '(' <expr> ')'
+                    | '[' <expr> ']'
+                    | 'not' <expr>
+                    | 'any'
+                    | 'tagged'
+                    | 'priority'
+                    | <number>
+<tag>             ::= ':' 1*<any character except ','>
+<number>          ::= ['-'] 1*<digit>
 ```
 
 #### Reference
