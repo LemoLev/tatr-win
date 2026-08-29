@@ -24,13 +24,13 @@ Inside of the task sub-folder there is one mandatory file `TASK.md` which is a m
 The format of `TASK.md`:
 
 ```markdown
-# <title-of-the-task>
+# <title>
 
-- STATUS: <OPEN|CLOSED>
+- STATUS: (OPEN|CLOSED)
 - PRIORITY: <number>
 - TAGS: <comma-separated-list-of-tags>
 
-[description-of-the-task]
+[description]
 ```
 
 As you work on the task feel free to append any discovered details about the task to the description.
