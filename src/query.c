@@ -106,6 +106,7 @@ Task_Match_Result task_matches_query(String_View original_src, const Task *task,
             if (!pop_type(original_src, stack, TYPE_INTEGER, &a)) return TMR_ERROR;
             da_append(stack, stack_bool(op->src, a.as.integer >= b.as.integer));
         } break;
+        // TASK(20260829-225753): `OP_EQ` and `OP_NEQ` could work with booleans too
         case OP_EQ: {
             Stack_Item a = {0};
             Stack_Item b = {0};
