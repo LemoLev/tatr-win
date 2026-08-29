@@ -3,3 +3,4 @@ stream , good stream topic
 release , planned for the next release
 emacs , tatr.el related but was moved out of the repo
 scope , currently working on
+wontfix , issues resolved without providing any actual fix

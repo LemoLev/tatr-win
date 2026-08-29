@@ -1,8 +1,8 @@
 # The comparison operators in Query Language are lame
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 100
-- TAGS: release,scope
+- TAGS: release
 
 lt, gt, lte, gte, etc.
 
