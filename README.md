@@ -1,8 +1,8 @@
-# Tasks Database
+# **Ta**sk **Tr**acker
 
 This is spec for an improvised Tasks system, because I needed something more powerful than just plane TODOs in the Source Code of my projects, yet I didn't want to install a full blown Issue Tracker System.
 
-## How does it work
+## The Spec
 
 ```
 project/
@@ -50,11 +50,24 @@ There might be an optional `tasks/tags` file with the following format:
 
 It serves as a documentation for each existing tag and the thirdparty tools may use it to display the tag descriptions.
 
-# Query Language
+## The Tool
 
-Query language is used with `tatr ls` command to select a set of tasks.
+The repo comes with the command line tool that helps to navigate and manipulate the Task Database:
 
-## Examples
+```console
+$ cc -o nob nob.c
+$ ./nob
+$ sudo cp ./build/tatr /usr/local/bin/
+$ tatr help
+```
+
+You are welcome to make your own tools.
+
+### Query Language
+
+Query language is used in `tatr ls` command to select a set of tasks.
+
+#### Examples
 
 Query everything with tag `bug`:
 
@@ -80,7 +93,7 @@ All the bugs with priority less than 50:
 $ tatr ls .bug and priority lt 50
 ```
 
-## Syntax
+#### Syntax
 
 Here is the [Backus–Naur form](https://en.wikipedia.org/wiki/Backus%E2%80%93Naur_form) of the language:
 
@@ -100,7 +113,7 @@ Here is the [Backus–Naur form](https://en.wikipedia.org/wiki/Backus%E2%80%93Na
 <number>  ::= ['-'] 1*<digit>
 ```
 
-## Reference
+#### Reference
 
 | Expression | Description |
 |-|-|
