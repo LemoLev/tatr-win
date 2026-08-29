@@ -26,3 +26,9 @@ special. Not sure what to do about it.
 
 Maybe if the people want to kanban this entire thing they should just
 use tags for that?
+
+---
+
+`STATUS` is just yet another tag. What we just consider a task closed
+if it has tag `CLOSED` and for backward compatibility, during the
+parsing just append the value of `STATUS` to the `TAGS` list?
