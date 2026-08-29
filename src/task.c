@@ -1,4 +1,7 @@
 #include "task.h"
+#include "ht.h"
+
+void parse_tags(Tags *tags, String_View sv);
 
 bool tags_contains(Tags tags, String_View tag)
 {
@@ -47,6 +50,7 @@ bool load_tasks(Tasks *tasks, const char *dir_path)
 {
     bool result = true;
     File_Paths children = {0};
+    Properties ps = { .hasheq = ht_sv_hasheq };
 
     if (!read_entire_dir(dir_path, &children)) return_defer(false);
     size_t checkpoint = temp_save();
@@ -71,27 +75,18 @@ bool load_tasks(Tasks *tasks, const char *dir_path)
         if (!read_entire_file(task_md_path, &sb_content)) return_defer(false);
         sb_append_null(&sb_content);
 
-        Md md = {0};
-        md_init(&md, (char*)task_md_path, sb_content.items);
+        ht_reset(&ps);
+        *ht_put(&ps, SVLIT("STATUS"))   = SVLIT("OPEN");   // Task is open until explicitly stated otherwise
+        *ht_put(&ps, SVLIT("PRIORITY")) = SVLIT("999999"); // Unset priority is high so you don't forget to set it
+        *ht_put(&ps, SVLIT("TAGS"))     = SVLIT("");       // No tags by default
 
         String_View title = {0};
-        if (!task_md_extract_title(&md, &title)) return_defer(false);
-        String_View status = {0};
-        if (!task_md_extract_field(&md, "STATUS", &status)) return_defer(false);
-        String_View priority = {0};
-        if (!task_md_extract_field(&md, "PRIORITY", &priority)) return_defer(false);
+        task_md_parse(sb_content.items, &title, &ps);
+
+        String_View status   = *ht_find(&ps, SVLIT("STATUS"));
+        String_View priority = *ht_find(&ps, SVLIT("PRIORITY"));
         Tags tags = {0};
-        md_trim_spaces(&md);
-        if (md_char(&md) == '-') {
-            String_View sv = {0};
-            if (!task_md_extract_field(&md, "TAGS", &sv)) return_defer(false);
-            sv = sv_trim_left(sv);
-            while (sv.count > 0) {
-                String_View tag = sv_trim(sv_chop_by_delim(&sv, ','));
-                da_append(&tags, tag);
-                sv = sv_trim_left(sv);
-            }
-        }
+        parse_tags(&tags, *ht_find(&ps, SVLIT("TAGS")));
 
         da_append(tasks, ((Task) {
             .id              = strdup(id),
@@ -105,6 +100,7 @@ bool load_tasks(Tasks *tasks, const char *dir_path)
 
 defer:
     free(children.items);
+    ht_free(&ps);
     return result;
 }
 
@@ -163,4 +159,14 @@ bool task_matches_tags(const Task *task, const char **tags, size_t tags_count)
         }
     }
     return true;
+}
+
+void parse_tags(Tags *tags, String_View sv)
+{
+    sv = sv_trim_left(sv);
+    while (sv.count > 0) {
+        String_View tag = sv_trim(sv_chop_by_delim(&sv, ','));
+        da_append(tags, tag);
+        sv = sv_trim_left(sv);
+    }
 }

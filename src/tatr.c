@@ -623,6 +623,12 @@ int main(int argc, char **argv)
 #endif // TASKS_TEST
 }
 
+#include "path.c"
+#include "huid.c"
+#include "md.c"
+#include "query.c"
+#include "task.c"
+
 #define NOB_IMPLEMENTATION
 #define NOB_OVERWRITE_TEMP_ON_REWIND
 #include "nob.h"
@@ -631,9 +637,3 @@ int main(int argc, char **argv)
 #include "flag.h"
 #define HT_IMPLEMENTATION
 #include "ht.h"
-
-#include "path.c"
-#include "huid.c"
-#include "md.c"
-#include "query.c"
-#include "task.c"

@@ -28,7 +28,7 @@ The format of `TASK.md`:
 
 - STATUS: <OPEN|CLOSED>
 - PRIORITY: <number>
-[- TAGS: <comma-separated-list-of-tags>]
+- TAGS: <comma-separated-list-of-tags>
 
 [description-of-the-task]
 ```
