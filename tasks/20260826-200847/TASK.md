@@ -2,9 +2,9 @@
 
 - STATUS: OPEN
 - PRIORITY: 100
-- TAGS: release
+- TAGS: release,scope
 
-Cephon wanted to kanban this who thing. I guess we could've just
+Cephon wanted to kanban this whole thing. I guess we could've just
 treated any not "CLOSED" status as opened and let user put whatever
 the want here.
 
