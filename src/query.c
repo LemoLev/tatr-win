@@ -268,16 +268,22 @@ bool compile_query_primary(String_View original_src, String_View *src, Query *qu
         return true;
     }
 
-    report_compile_query_diagnostic(original_src, token, "ERROR: Unexpected start of a primary expression `"SV_Fmt"`.", SV_Arg(token));
-    fprintf(stderr, "What we expect here:\n");
+    fprintf(stderr, "What are primary expressions:\n");
+    fprintf(stderr, "\n");
     fprintf(stderr, "    :<tag>         - checks if task has a tag\n");
-    fprintf(stderr, "    ( <expr> )     - a grouped expression\n");
+    fprintf(stderr, "    ( <expr> )     - grouped expression\n");
     fprintf(stderr, "    [ <expr> ]     - same as previous but for Bash users\n");
     fprintf(stderr, "    not <primary>  - negation of a primary expression\n");
-    fprintf(stderr, "    any            - an expression that always returns true\n");
+    fprintf(stderr, "    any            - expression that always returns true\n");
     fprintf(stderr, "    tagged         - checks if a task is tagged\n");
     fprintf(stderr, "    priority       - priority of a task as an integer\n");
-    fprintf(stderr, "    <number>       - a signed integer\n");
+    fprintf(stderr, "    <number>       - signed integer\n");
+    fprintf(stderr, "\n");
+    if (token.count == 0) {
+        report_compile_query_diagnostic(original_src, token, "ERROR: Primary expression is expected here.");
+    } else {
+        report_compile_query_diagnostic(original_src, token, "ERROR: Unexpected start of a primary expression `"SV_Fmt"`.", SV_Arg(token));
+    }
     return false;
 }
 
@@ -369,11 +375,13 @@ bool compile_query(String_View original_src, String_View *src, Query *query)
     if (!compile_query_expr(original_src, src, query)) return false;
     String_View end = chop_next_query_token(src);
     if (end.count != 0) {
-        report_compile_query_diagnostic(original_src, end, "ERROR: Unexpected infix operator");
         fprintf(stderr, "Supported infix operators:\n");
+        fprintf(stderr, "\n");
         fprintf(stderr, "    and  or                  - logical operators\n");
         fprintf(stderr, "    <  <=  >  >=  =  ==  !=  - comparison operators\n");
         fprintf(stderr, "    lt  le  gt  ge  eq  ne   - same as above but for Bash users\n");
+        fprintf(stderr, "\n");
+        report_compile_query_diagnostic(original_src, end, "ERROR: Unexpected infix operator `"SV_Fmt"`", SV_Arg(end));
         return false;
     }
     return true;
