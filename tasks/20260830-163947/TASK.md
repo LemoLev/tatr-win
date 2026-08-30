@@ -20,14 +20,6 @@ We should also add a section about tokenization to the README.
 
 Shell tokenization may get in the way by turning `{foo     bar}` into `{foo bar}`.
 
-## NOTE(20260830-170102)
-
-Another solution is to change the spec and just limit what kind of tags could be used in there.
-
-It gets a bit messy when the unicode starts to get involved.
-
-I feel like just forbidding whitespaces in the names of the tags solves majority of the problems.
-
 ## NOTE(20260830-173544)
 
 Fork from NOTE(20260830-170057)
@@ -37,3 +29,17 @@ Actually, what if the syntax for `OP_TAG` is not `:tag` but `{tag}`?
 `tatr ls {bug} and {release}`
 
 It's a bit annoying that you have balance the curly braces now though.
+
+## NOTE(20260830-170102)
+
+Another solution is to change the spec and just limit what kind of tags could be used in there.
+
+It gets a bit messy when the unicode starts to get involved.
+
+I feel like just forbidding whitespaces in the names of the tags solves majority of the problems.
+
+If we are going that route the tool must validate tag names everywhere.
+
+If would've been simplier if the whitespaces WERE the separators. But I guess it's too late for that now. We need to maintain backward compatibility with existing `tasks/` folders.
+
+Though we could just say that commas are treated as whitespaces or something.
