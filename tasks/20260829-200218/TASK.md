@@ -45,3 +45,14 @@ don't need to maintain backward compat in here.
 I don't like that the most common operation with priority is `priority not below 100`
 
 Maybe as mentioned in NOTE(20260829-200435) consider using `at least` and `at most`?
+
+## NOTE(20260830-044156)
+
+Another set I came up with
+
+- `{`
+- `{=`
+- `}`
+- `}=`
+- `=`
+- `!=`
