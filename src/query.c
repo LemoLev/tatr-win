@@ -210,12 +210,6 @@ bool compile_query_primary(String_View original_src, String_View *src, Query *qu
 {
     String_View token = chop_next_query_token(src);
 
-    if (token.count == 0) {
-        // TASK(20260830-065446): primary expressions start from more things
-        report_compile_query_diagnostic(original_src, *src, "ERROR: Expected `:`, `(`, `not`, `any`, `tagged`.");
-        return false;
-    }
-
     // We used to use dot to refer to a tag before. We still accept it for backward compatibility.
     // But we may remove it at some point in the future.
     if (sv_eq(token, SVLIT(".")) || sv_eq(token, SVLIT(":"))) {
