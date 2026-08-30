@@ -212,7 +212,11 @@ bool test_ls_query_report_error_utf8(Test_Runner *r)
         sv_from_cstr(
             ":привет hello\n"
             "        ^\n"
-            "ERROR: Expected keywords `and`, or `or`\n"),
+            "ERROR: Unexpected infix operator\n"
+            "Supported infix operators:\n"
+            "    and  or                  - logical operators\n"
+            "    <  <=  >  >=  =  ==  !=  - comparison operators\n"
+            "    lt  le  gt  ge  eq  ne   - same as above but for Bash users\n"),
         sb_to_sv(r->sb_stderr))) return false;
     nob_log(INFO, "OK");
     return true;

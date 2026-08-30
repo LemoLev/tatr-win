@@ -272,7 +272,7 @@ bool compile_query_primary(String_View original_src, String_View *src, Query *qu
     fprintf(stderr, "What we expect here:\n");
     fprintf(stderr, "    :<tag>         - checks if task has a tag\n");
     fprintf(stderr, "    ( <expr> )     - a grouped expression\n");
-    fprintf(stderr, "    [ <expr> ]     - same as previous but for bash users\n");
+    fprintf(stderr, "    [ <expr> ]     - same as previous but for Bash users\n");
     fprintf(stderr, "    not <primary>  - negation of a primary expression\n");
     fprintf(stderr, "    any            - an expression that always returns true\n");
     fprintf(stderr, "    tagged         - checks if a task is tagged\n");
@@ -369,8 +369,11 @@ bool compile_query(String_View original_src, String_View *src, Query *query)
     if (!compile_query_expr(original_src, src, query)) return false;
     String_View end = chop_next_query_token(src);
     if (end.count != 0) {
-        // TASK(20260829-221717): we actually expect much more infix keywords when the expression is not fully parsed
-        report_compile_query_diagnostic(original_src, end, "ERROR: Expected keywords `and`, or `or`");
+        report_compile_query_diagnostic(original_src, end, "ERROR: Unexpected infix operator");
+        fprintf(stderr, "Supported infix operators:\n");
+        fprintf(stderr, "    and  or                  - logical operators\n");
+        fprintf(stderr, "    <  <=  >  >=  =  ==  !=  - comparison operators\n");
+        fprintf(stderr, "    lt  le  gt  ge  eq  ne   - same as above but for Bash users\n");
         return false;
     }
     return true;
