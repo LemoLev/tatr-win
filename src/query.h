@@ -17,6 +17,8 @@
 
 #include "task.h"
 
+String_View chop_next_query_token(String_View *src);
+
 typedef enum {
     OP_ANY,
     OP_TAG,

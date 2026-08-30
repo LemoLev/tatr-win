@@ -1,6 +1,6 @@
 # Separate tokenization from parsing in the Query Language
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 100
 - TAGS: tql,release
 

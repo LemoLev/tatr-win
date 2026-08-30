@@ -45,7 +45,7 @@ The format of `TASK.md`:
 
 - STATUS: (OPEN|CLOSED)
 - PRIORITY: <number>
-- TAGS: <comma-separated-list-of-tags>
+- TAGS: <comma-separated-list-of-tags-without-trailing-whitespaces>
 
 [description]
 ```

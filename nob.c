@@ -85,6 +85,12 @@ bool expect_failure(Test_Runner *r)
 {
     if (r->ok) {
         nob_log(ERROR, "Command succeeded, but should've failed");
+        String_View svout = sb_to_sv(r->sb_stdout);
+        nob_log(ERROR, "STDOUT:");
+        fprintf(stderr, SV_Fmt"\n", SV_Arg(svout));
+        String_View sverr = sb_to_sv(r->sb_stderr);
+        nob_log(ERROR, "STDERR:");
+        fprintf(stderr, SV_Fmt"\n", SV_Arg(sverr));
         return false;
     }
     return true;
@@ -94,6 +100,12 @@ bool expect_success(Test_Runner *r)
 {
     if (!r->ok) {
         nob_log(ERROR, "Command failed, but should've suceeded");
+        String_View svout = sb_to_sv(r->sb_stdout);
+        nob_log(ERROR, "STDOUT:");
+        fprintf(stderr, SV_Fmt"\n", SV_Arg(svout));
+        String_View sverr = sb_to_sv(r->sb_stderr);
+        nob_log(ERROR, "STDERR:");
+        fprintf(stderr, SV_Fmt"\n", SV_Arg(sverr));
         return false;
     }
     return true;
@@ -120,16 +132,35 @@ bool test_ls_query_negation_of_complex_expression_in_parens(Test_Runner *r)
     if (!assert_test_output(
         "STDOUT",
         sv_from_cstr(
-            "OP_TAGGED\n"
-            "OP_TAG bug\n"
-            "OP_TAG test\n"
-            "OP_AND\n"
-            "OP_TAG foo\n"
-            "OP_AND\n"
-            "OP_TAG bar\n"
-            "OP_AND\n"
-            "OP_OR\n"
-            "OP_NOT\n"),
+            "TOKENS:\n"
+            "    not\n"
+            "    (\n"
+            "    tagged\n"
+            "    or\n"
+            "    :\n"
+            "    bug\n"
+            "    and\n"
+            "    :\n"
+            "    test\n"
+            "    and\n"
+            "    :\n"
+            "    foo\n"
+            "    and\n"
+            "    :\n"
+            "    bar\n"
+            "    )\n"
+            "\n"
+            "OPS:\n"
+            "    OP_TAGGED\n"
+            "    OP_TAG bug\n"
+            "    OP_TAG test\n"
+            "    OP_AND\n"
+            "    OP_TAG foo\n"
+            "    OP_AND\n"
+            "    OP_TAG bar\n"
+            "    OP_AND\n"
+            "    OP_OR\n"
+            "    OP_NOT\n"),
         sb_to_sv(r->sb_stdout))) return false;
     if (!assert_test_output("STDERR", (String_View){0}, sb_to_sv(r->sb_stderr))) return false;
     nob_log(INFO, "OK");
@@ -144,12 +175,26 @@ bool test_ls_query_not_stuck_to_open_paren(Test_Runner *r)
     if (!assert_test_output(
         "STDOUT",
         sv_from_cstr(
-            "OP_TAG bug\n"
-            "OP_TAG test\n"
-            "OP_AND\n"
-            "OP_NOT\n"
-            "OP_TAG query\n"
-            "OP_AND\n"),
+            "TOKENS:\n"
+            "    not\n"
+            "    (\n"
+            "    :\n"
+            "    bug\n"
+            "    and\n"
+            "    :\n"
+            "    test\n"
+            "    )\n"
+            "    and\n"
+            "    :\n"
+            "    query\n"
+            "\n"
+            "OPS:\n"
+            "    OP_TAG bug\n"
+            "    OP_TAG test\n"
+            "    OP_AND\n"
+            "    OP_NOT\n"
+            "    OP_TAG query\n"
+            "    OP_AND\n"),
         sb_to_sv(r->sb_stdout))) return false;
     if (!assert_test_output("STDERR", (String_View){0}, sb_to_sv(r->sb_stderr))) return false;
     nob_log(INFO, "OK");
@@ -181,9 +226,15 @@ bool test_ls_query_priority_above_20(Test_Runner *r)
     if (!assert_test_output(
         "STDOUT",
         SVLIT(
-            "OP_PRIORITY\n"
-            "OP_INTEGER 20\n"
-            "OP_GT\n"),
+            "TOKENS:\n"
+            "    priority\n"
+            "    gt\n"
+            "    20\n"
+            "\n"
+            "OPS:\n"
+            "    OP_PRIORITY\n"
+            "    OP_INTEGER 20\n"
+            "    OP_GT\n"),
         sb_to_sv(r->sb_stdout))) return false;
     if (!assert_test_output(
         "STDERR",

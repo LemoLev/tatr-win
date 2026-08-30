@@ -149,7 +149,17 @@ bool ls_run(Command *self, const char *program_name, int argc, char **argv)
     if (!compile_query(original_src, &src, &query)) return false;
 
     if (debug) {
+        printf("TOKENS:\n");
+        src = sv_trim(sb_to_sv(query_src));
+        for (;;) {
+            String_View token = chop_next_query_token(&src);
+            if (token.count == 0) break;
+            printf("    "SV_Fmt"\n", SV_Arg(token));
+        }
+        printf("\n");
+        printf("OPS:\n");
         da_foreach(Op, op, &query) {
+            printf("    ");
             print_op(*op);
         }
         return true;

@@ -14,11 +14,52 @@
 // with this program; if not, see <https://www.gnu.org/licenses/>.
 #include "query.h"
 
-void report_compile_query_diagnostic(String_View original_src, const String_View *src, const char *format, ...) NOB_PRINTF_FORMAT(3, 4);
+void report_compile_query_diagnostic(String_View original_src, String_View src, const char *format, ...) NOB_PRINTF_FORMAT(3, 4);
 
-static int not_end_of_query_token(int x)
+int is_special(int x)
 {
-    return x != ' ' && x != ')' && x != '(' && x != ']' && x != '[';
+    if (x == '<') return true;
+    if (x == '>') return true;
+    if (x == '=') return true;
+    if (x == '(') return true;
+    if (x == ')') return true;
+    if (x == '[') return true;
+    if (x == ']') return true;
+    if (x == ':') return true;
+    if (x == '.') return true;
+    if (x == '!') return true;
+    return false;
+}
+
+int is_not_special_nor_space(int x)
+{
+    return !is_special(x) && !isspace(x);
+}
+
+String_View chop_next_query_token(String_View *src)
+{
+    *src = sv_trim_left(*src);
+
+    if (src->count == 0) return *src;
+
+    if (sv_starts_with(*src, SVLIT("<="))) return sv_chop_left(src, 2);
+    if (sv_starts_with(*src, SVLIT(">="))) return sv_chop_left(src, 2);
+    if (sv_starts_with(*src, SVLIT("=="))) return sv_chop_left(src, 2);
+    if (sv_starts_with(*src, SVLIT("!="))) return sv_chop_left(src, 2);
+
+    if (sv_starts_with(*src, SVLIT("<")))  return sv_chop_left(src, 1);
+    if (sv_starts_with(*src, SVLIT(">")))  return sv_chop_left(src, 1);
+    if (sv_starts_with(*src, SVLIT("=")))  return sv_chop_left(src, 1);
+    if (sv_starts_with(*src, SVLIT("(")))  return sv_chop_left(src, 1);
+    if (sv_starts_with(*src, SVLIT(")")))  return sv_chop_left(src, 1);
+    if (sv_starts_with(*src, SVLIT("[")))  return sv_chop_left(src, 1);
+    if (sv_starts_with(*src, SVLIT("]")))  return sv_chop_left(src, 1);
+
+    if (sv_starts_with(*src, SVLIT(":")))  return sv_chop_left(src, 1);
+    if (sv_starts_with(*src, SVLIT(".")))  return sv_chop_left(src, 1);
+
+    // TASK(20260830-163947): TQL supports less tags than the spec allows to define
+    return sv_chop_while(src, is_not_special_nor_space);
 }
 
 void print_op(Op op)
@@ -46,7 +87,7 @@ bool pop_type(String_View original_src, Stack *stack, Type type, Stack_Item *ite
 {
     *item = da_pop(stack);
     if (item->type != type) {
-        report_compile_query_diagnostic(original_src, &item->src, "ERROR: Expected %s but got %s", type_name(type), type_name(item->type));
+        report_compile_query_diagnostic(original_src, item->src, "ERROR: Expected %s but got %s", type_name(type), type_name(item->type));
         return false;
     }
     return true;
@@ -148,11 +189,11 @@ Task_Match_Result task_matches_query(String_View original_src, const Task *task,
     return TMR_MISMATCHED;
 }
 
-void report_compile_query_diagnostic(String_View original_src, const String_View *src, const char *format, ...)
+void report_compile_query_diagnostic(String_View original_src, String_View src, const char *format, ...)
 {
     int cursor = sv_utf8_len((String_View) {
         .data = original_src.data,
-        .count = src->data - original_src.data,
+        .count = src.data - original_src.data,
     }, NULL) + 1;
     fprintf(stderr, SV_Fmt"\n", SV_Arg(original_src));
     fprintf(stderr, "%*s\n", cursor, "^");
@@ -167,76 +208,74 @@ bool compile_query_expr(String_View original_src, String_View *src, Query *query
 
 bool compile_query_primary(String_View original_src, String_View *src, Query *query)
 {
-    *src = sv_trim_left(*src);
-    if (src->count == 0) {
+    String_View token = chop_next_query_token(src);
+
+    if (token.count == 0) {
         // TASK(20260830-065446): primary expressions start from more things
-        report_compile_query_diagnostic(original_src, src, "ERROR: Expected `:`, `(`, `not`, `any`, `tagged`.");
+        report_compile_query_diagnostic(original_src, *src, "ERROR: Expected `:`, `(`, `not`, `any`, `tagged`.");
         return false;
     }
+
     // We used to use dot to refer to a tag before. We still accept it for backward compatibility.
     // But we may remove it at some point in the future.
-    if (*src->data == '.' || *src->data == ':') {
-        if (*src->data == '.') {
-            report_compile_query_diagnostic(original_src, src, "WARNING: Using `.` to refer to tags is deprecated and will be removed in the future. Use `:` instead.");
+    if (sv_eq(token, SVLIT(".")) || sv_eq(token, SVLIT(":"))) {
+        if (sv_eq(token, SVLIT("."))) {
+            report_compile_query_diagnostic(original_src, token, "WARNING: Using `.` to refer to tags is deprecated and will be removed in the future. Use `:` instead.");
         }
-        sv_chop_left(src, 1);
-        String_View tag = sv_chop_while(src, not_end_of_query_token);
-        da_append(query, op_tag(*src, tag));
+        String_View tag = chop_next_query_token(src);
+        da_append(query, op_tag(token, tag));
         return true;
     }
-    if (*src->data == '(' || *src->data == '[') {
-        char start = *src->data;
-        sv_chop_left(src, 1);
+
+    if (sv_eq(token, SVLIT("(")) || sv_eq(token, SVLIT("["))) {
+        char start = *token.data;
         if (!compile_query_expr(original_src, src, query)) return false;
-        *src = sv_trim_left(*src);
-        if (start == '(' && !sv_starts_with(*src, sv_from_cstr(")"))) {
-            report_compile_query_diagnostic(original_src, src, "ERROR: Expected `)`.");
+        token = chop_next_query_token(src);
+        if (start == '(' && !sv_eq(token, SVLIT(")"))) {
+            report_compile_query_diagnostic(original_src, token, "ERROR: Expected `)`.");
             return false;
         }
-        if (start == '[' && !sv_starts_with(*src, sv_from_cstr("]"))) {
-            report_compile_query_diagnostic(original_src, src, "ERROR: Expected `]`.");
+        if (start == '[' && !sv_eq(token, SVLIT("]"))) {
+            report_compile_query_diagnostic(original_src, token, "ERROR: Expected `]`.");
             return false;
         }
-        sv_chop_left(src, 1);
         return true;
     }
-    String_View saved_src = *src;
-    String_View key = sv_chop_while(src, not_end_of_query_token);
-    if (sv_eq(key, SVLIT("not"))) {
+
+    if (sv_eq(token, SVLIT("not"))) {
         if (!compile_query_primary(original_src, src, query)) return false;
-        da_append(query, op_not(saved_src));
+        da_append(query, op_not(token));
         return true;
     }
-    if (sv_eq(key, SVLIT("any"))) {
-        da_append(query, op_any(saved_src));
+
+    if (sv_eq(token, SVLIT("any"))) {
+        da_append(query, op_any(token));
         return true;
     }
-    if (sv_eq(key, SVLIT("tagged"))) {
-        da_append(query, op_tagged(saved_src));
+
+    if (sv_eq(token, SVLIT("tagged"))) {
+        da_append(query, op_tagged(token));
         return true;
     }
-    if (sv_eq(key, SVLIT("priority"))) {
-        da_append(query, op_priority(saved_src));
+
+    if (sv_eq(token, SVLIT("priority"))) {
+        da_append(query, op_priority(token));
         return true;
     }
 
     size_t checkpoint = temp_save();
-    char *endptr = NULL;
-    const char *nptr = temp_sv_to_cstr(key);
-    long integer = strtol(nptr, &endptr, 10);
-    if (nptr < endptr && *endptr == '\0') {
-        da_append(query, op_integer(saved_src, integer));
-        temp_rewind(checkpoint);
+    char *endptr      = NULL;
+    const char *nptr  = temp_sv_to_cstr(token);
+    long integer      = strtol(nptr, &endptr, 10);
+    bool ok           = nptr < endptr && *endptr == '\0';
+    temp_rewind(checkpoint);
+    if (ok) {
+        da_append(query, op_integer(token, integer));
         return true;
     }
-    temp_rewind(checkpoint);
 
-    *src = saved_src;
-    if (key.count == 0) {
-        report_compile_query_diagnostic(original_src, src, "ERROR: Expected `:`, `(`, `not`, `any`, `tagged`, or `priority`.");
-    } else {
-        report_compile_query_diagnostic(original_src, src, "ERROR: Unknown keyword `"SV_Fmt"`. Expected keywords `not`, `any`, `tagged`, or `priority`.", SV_Arg(key));
-    }
+    // TASK(20260830-065446): primary expressions start from more things
+    report_compile_query_diagnostic(original_src, token, "ERROR: Unknown keyword `"SV_Fmt"`. Expected keywords `not`, `any`, `tagged`, or `priority`.", SV_Arg(token));
     return false;
 }
 
@@ -245,38 +284,36 @@ bool compile_query_compare(String_View original_src, String_View *src, Query *qu
     // <expr> [<compare> <expr>]*
     if (!compile_query_primary(original_src, src, query)) return false;
     for (;;) {
-        *src = sv_trim_left(*src);
-        if (src->count == 0) break;
         String_View saved_src = *src;
-        String_View key = sv_chop_while(src, not_end_of_query_token);
-        if (sv_eq(key, SVLIT("lt")) || sv_eq(key, SVLIT("<"))) {
+        String_View token = chop_next_query_token(src);
+        if (sv_eq(token, SVLIT("lt")) || sv_eq(token, SVLIT("<"))) {
             if (!compile_query_primary(original_src, src, query)) return false;
-            da_append(query, op_lt(*src));
+            da_append(query, op_lt(token));
             continue;
         }
-        if (sv_eq(key, SVLIT("le")) || sv_eq(key, SVLIT("<="))) {
+        if (sv_eq(token, SVLIT("le")) || sv_eq(token, SVLIT("<="))) {
             if (!compile_query_primary(original_src, src, query)) return false;
-            da_append(query, op_lte(*src));
+            da_append(query, op_lte(token));
             continue;
         }
-        if (sv_eq(key, SVLIT("gt")) || sv_eq(key, SVLIT(">"))) {
+        if (sv_eq(token, SVLIT("gt")) || sv_eq(token, SVLIT(">"))) {
             if (!compile_query_primary(original_src, src, query)) return false;
-            da_append(query, op_gt(*src));
+            da_append(query, op_gt(token));
             continue;
         }
-        if (sv_eq(key, SVLIT("ge")) || sv_eq(key, SVLIT(">="))) {
+        if (sv_eq(token, SVLIT("ge")) || sv_eq(token, SVLIT(">="))) {
             if (!compile_query_primary(original_src, src, query)) return false;
-            da_append(query, op_gte(*src));
+            da_append(query, op_gte(token));
             continue;
         }
-        if (sv_eq(key, SVLIT("eq")) || sv_eq(key, SVLIT("=")) || sv_eq(key, SVLIT("=="))) {
+        if (sv_eq(token, SVLIT("eq")) || sv_eq(token, SVLIT("=")) || sv_eq(token, SVLIT("=="))) {
             if (!compile_query_primary(original_src, src, query)) return false;
-            da_append(query, op_eq(*src));
+            da_append(query, op_eq(token));
             continue;
         }
-        if (sv_eq(key, SVLIT("ne")) || sv_eq(key, SVLIT("!="))) {
+        if (sv_eq(token, SVLIT("ne")) || sv_eq(token, SVLIT("!="))) {
             if (!compile_query_primary(original_src, src, query)) return false;
-            da_append(query, op_neq(*src));
+            da_append(query, op_neq(token));
             continue;
         }
         *src = saved_src;
@@ -290,18 +327,14 @@ bool compile_query_and(String_View original_src, String_View *src, Query *query)
     // <expr> [and <expr>]*
     if (!compile_query_compare(original_src, src, query)) return false;
     for (;;) {
-        *src = sv_trim_left(*src);
-        if (src->count == 0) {
-            return true;
-        }
         String_View saved_src = *src;
-        String_View key = sv_chop_while(src, not_end_of_query_token);
-        if (!sv_eq(key, sv_from_cstr("and"))) {
+        String_View token = chop_next_query_token(src);
+        if (!sv_eq(token, sv_from_cstr("and"))) {
             *src = saved_src;
             return true;
         }
         if (!compile_query_compare(original_src, src, query)) return false;
-        da_append(query, op_and(*src));
+        da_append(query, op_and(token));
     }
     return true;
 }
@@ -311,18 +344,14 @@ bool compile_query_or(String_View original_src, String_View *src, Query *query)
     // <expr> [or <expr>]*
     if (!compile_query_and(original_src, src, query)) return false;
     for (;;) {
-        *src = sv_trim_left(*src);
-        if (src->count == 0) {
-            return true;
-        }
         String_View saved_src = *src;
-        String_View key = sv_chop_while(src, not_end_of_query_token);
-        if (!sv_eq(key, sv_from_cstr("or"))) {
+        String_View token = chop_next_query_token(src);
+        if (!sv_eq(token, sv_from_cstr("or"))) {
             *src = saved_src;
             return true;
         }
         if (!compile_query_and(original_src, src, query)) return false;
-        da_append(query, op_or(*src));
+        da_append(query, op_or(token));
     }
     return true;
 }
@@ -336,10 +365,10 @@ bool compile_query_expr(String_View original_src, String_View *src, Query *query
 bool compile_query(String_View original_src, String_View *src, Query *query)
 {
     if (!compile_query_expr(original_src, src, query)) return false;
-    *src = sv_trim_left(*src);
-    if (src->count != 0) {
+    String_View end = chop_next_query_token(src);
+    if (end.count != 0) {
         // TASK(20260829-221717): we actually expect much more infix keywords when the expression is not fully parsed
-        report_compile_query_diagnostic(original_src, src, "ERROR: Expected keywords `and`, or `or`");
+        report_compile_query_diagnostic(original_src, end, "ERROR: Expected keywords `and`, or `or`");
         return false;
     }
     return true;
