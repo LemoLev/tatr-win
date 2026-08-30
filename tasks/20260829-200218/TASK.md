@@ -1,6 +1,6 @@
 # The comparison operators in Query Language are lame
 
-- STATUS: CLOSED
+- STATUS: OPEN
 - PRIORITY: 100
 - TAGS: release
 
@@ -39,3 +39,9 @@ remove the weird lame comparison operators as early as possible.
 
 I didn't use them for too long to develop any important reflexes, so I
 don't need to maintain backward compat in here.
+
+## NOTE(20260830-035331)
+
+I don't like that the most common operation with priority is `priority not below 100`
+
+Maybe as mentioned in NOTE(20260829-200435) consider using `at least` and `at most`?
