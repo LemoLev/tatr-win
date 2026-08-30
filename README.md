@@ -1,8 +1,12 @@
 # **Ta**sk **Tr**acker
 
-This is spec for an improvised Tasks system, because I needed something more powerful than just plane TODOs in the Source Code of my projects, yet I didn't want to install a full blown Issue Tracker System.
+This is an improvised Tasks system, because I needed something more powerful than just plane TODOs in the Source Code of my projects, yet I didn't want to install a full blown Issue Tracker System.
 
 ## The Spec
+
+### Layout
+
+Each project at the root has `tasks/` folder which contains sub-folders for each task.
 
 ```
 project/
@@ -17,13 +21,20 @@ project/
     +-screenshot.png
     +-...
   +-...
++-...
 ```
 
-Each project at the root has `tasks/` folder which contains sub-folders for each task.
+### HUID
 
-Each task sub-folder is named with a Task ID. The Task ID format is `[0-9]{8}-[0-9]{6}`. Just grab the current date and time and use it as the Task ID. Use UTC timezone so the current timezone is irrelevant. If your Task ID collides with an existing one, just wait one second and try again. ;)
+Each task sub-folder is named with a Task ID. The Task ID format is `[0-9]{8}-[0-9]{6}`. Just grab the current date and time and use it as the Task ID. Use UTC timezone so the current timezone is irrelevant. If your Task ID collides with an existing one, just wait one second and try again.
 
-Actually the full format is `[0-9]{8}-[0-9]{6}(-[a-zA-Z0-9\\-]*)?`. So if you work in a team you can agree on individual suffixes for the IDs to slap at the end like `20260829-235855-rexim` or `20260829-235902-01`. Those are valid Task IDs too.
+The full format is actually `[0-9]{8}-[0-9]{6}(-[a-zA-Z0-9\\-]*)?`. So if you work in a team you can agree on unique suffixes per individual to slap at the end like `20260829-235855-rexim` or `20260829-235902-01`. Those are valid Task IDs too.
+
+I call this ID system HUID (Human-Unique IDentifier). It is fairly unique if you generate IDs at "Human-speed". That is for me personally the speed at which I need to generate them is never below one second.
+
+Having a Unique Task ID is beneficial under such control systems as git, because you can generate tasks in parallel branches and then relatively easily merge them together.
+
+### TASK.md
 
 Inside of the task sub-folder there is one mandatory file `TASK.md` which is a markdown file describing the task. The folder may contain other files as attachments to the task. `TASK.md` should link to the attachments as necessary. Try to keep the size of the attachments small, since they are going to be committed to the git repo. Use [ffmpeg](https://ffmpeg.org/) to reencode any screencast to reduce their size as necessary.
 
@@ -58,7 +69,7 @@ It serves as a documentation for each existing tag and the thirdparty tools may 
 
 ## The Tool
 
-The repo comes with the command line tool that helps to navigate and manipulate the Task Database:
+The repo comes with a command line tool that helps to navigate and manipulate the `tasks/` folder:
 
 ```console
 $ cc -o nob nob.c
@@ -96,7 +107,7 @@ $ tatr ls not tagged
 All the bugs with priority less than 50:
 
 ```console
-$ tatr ls :bug and priority lt 50
+$ tatr ls :bug and priority below 50
 ```
 
 #### Syntax

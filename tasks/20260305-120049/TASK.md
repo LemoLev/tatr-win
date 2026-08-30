@@ -1,6 +1,6 @@
 # Presentable to GitHub README
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 50
 - TAGS: release
 
