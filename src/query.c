@@ -254,7 +254,7 @@ bool compile_query_compare(String_View original_src, String_View *src, Query *qu
             da_append(query, op_lt(*src));
             continue;
         }
-        if (sv_eq(key, SVLIT("lt=")) || sv_eq(key, SVLIT("<="))) {
+        if (sv_eq(key, SVLIT("le")) || sv_eq(key, SVLIT("<="))) {
             if (!compile_query_primary(original_src, src, query)) return false;
             da_append(query, op_lte(*src));
             continue;
@@ -264,17 +264,17 @@ bool compile_query_compare(String_View original_src, String_View *src, Query *qu
             da_append(query, op_gt(*src));
             continue;
         }
-        if (sv_eq(key, SVLIT("gt=")) || sv_eq(key, SVLIT(">="))) {
+        if (sv_eq(key, SVLIT("ge")) || sv_eq(key, SVLIT(">="))) {
             if (!compile_query_primary(original_src, src, query)) return false;
             da_append(query, op_gte(*src));
             continue;
         }
-        if (sv_eq(key, SVLIT("="))) {
+        if (sv_eq(key, SVLIT("eq")) || sv_eq(key, SVLIT("=")) || sv_eq(key, SVLIT("=="))) {
             if (!compile_query_primary(original_src, src, query)) return false;
             da_append(query, op_eq(*src));
             continue;
         }
-        if (sv_eq(key, SVLIT("!="))) {
+        if (sv_eq(key, SVLIT("ne")) || sv_eq(key, SVLIT("!="))) {
             if (!compile_query_primary(original_src, src, query)) return false;
             da_append(query, op_neq(*src));
             continue;

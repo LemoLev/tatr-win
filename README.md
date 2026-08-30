@@ -52,7 +52,7 @@ The format of `TASK.md`:
 
 As you work on the task feel free to append any discovered details about the task to the description.
 
-Use `git-blame` and `git-log` to learn about when, how and by whom any changes to the task were made.
+Use [git-blame](https://git-scm.com/docs/git-blame) and [git-log](https://git-scm.com/docs/git-log) to learn about when, how and by whom any changes to the task were made.
 
 ### Tag descriptions
 
@@ -121,7 +121,9 @@ Here is the [Backus–Naur form](https://en.wikipedia.org/wiki/Backus%E2%80%93Na
 <or>              ::= <and> *('or' <and>)
 <and>             ::= <compare> *('and' <compare>)
 <compare>         ::= <primary> *(<compare-op> <primary>)
-<compare-op>      ::= 'lt' | 'lt=' | 'gt' | 'gt=' | '<' | '<=' | '>' | '>=' | '=' | '!='
+<compare-op>      ::= <compare-test> | <compare-trad>
+<compare-test>    ::= 'lt' | 'le' | 'gt' | 'ge' | 'eq' | 'ne'
+<compare-trad>    ::= '<' | '<=' | '>' | '>=' | '=' | '==' | '!='
 <primary>         ::= <tag>
                     | '(' <expr> ')'
                     | '[' <expr> ']'
@@ -138,25 +140,25 @@ The syntax is designed to be used in shell environment without requiring any spe
 
 In shells parenthsis usually have special meaning. Because of that you can use square brackets for grouping expressions `'[' <expr> ']'` along with regular parenthesis `'(' <expr> ')'`.
 
-Another problematic symbols are `<` and `>`, which are usually used for file redirecting. We created aliases for them: `lt` and `gt`. Correspondingly there are `lt=` (less or equal) and `gt=` (greater or equal).
+Another problematic symbols are `<` and `>`, which are usually used for file redirecting. Which means we can't easily use traditional comparison operators (even though we support them, you just have to escape them). We created aliases following the [test(1)](https://www.man7.org/linux/man-pages/man1/test.1.html) utility convention: `lt`, `le`, `gt`, `ge`, `eq`, and `ne`.
 
 #### Reference
 
 | Expression | Description |
 |-|-|
-| `<expr1:bool> or <expr2:bool>` | True when `<expr1:bool>` or `<expr2:bool>` or both are true. Just a regular [logical disjunction](https://en.wikipedia.org/wiki/Logical_disjunction). |
-| `<expr1:bool> and <expr2:bool>` | True when both `<expr1:bool>` and `<expr2:bool>` are true. Just a regular [logical conjunction](https://en.wikipedia.org/wiki/Logical_conjunction) |
+| `<a:bool> or <b:bool>` | True when `<a:bool>` or `<b:bool>` or both are true. Just a regular [logical disjunction](https://en.wikipedia.org/wiki/Logical_disjunction). |
+| `<a:bool> and <b:bool>` | True when both `<a:bool>` and `<b:bool>` are true. Just a regular [logical conjunction](https://en.wikipedia.org/wiki/Logical_conjunction) |
 | `:<tag>` | True when a task's `TAGS` property contains `<tag>` |
 | `not <expr:bool>` | True when `<expr:bool>` is false. |
 | `tagged` | True when a task has at least one tag in its `TAGS` property. |
 | `any` | Always true for any task. |
 | `priority` | Priority of the task as an integer. |
-| `<expr1:int> lt <expr2:int>` | True when `<expr1:int>` is less than `<expr2:int>`.|
-| `<expr1:int> gt <expr2:int>` | True when `<expr1:int>` is greater than `<expr2:int>`.|
-| `<expr1:int> lt= <expr2:int>` | True when `<expr1:int>` is less or equal to `<expr2:int>`.|
-| `<expr1:int> gt= <expr2:int>` | True when `<expr1:int>` is greater or equal to `<expr2:int>`.|
-| `<expr1:int> = <expr2:int>` | True when `<expr1:int>` is equal to `<expr2:int>`.|
-| `<expr1:int> != <expr2:int>` | True when `<expr1:int>` is not equal to `<expr2:int>`.|
+| `<a:int> lt <b:int>` | True when `<a:int>` is less than `<b:int>`. Aliases: `<`.|
+| `<a:int> gt <b:int>` | True when `<a:int>` is greater than `<b:int>`. Aliases: `>`|
+| `<a:int> le <b:int>` | True when `<a:int>` is less or equal to `<b:int>`. Aliases: `<=`.|
+| `<a:int> ge <b:int>` | True when `<a:int>` is greater or equal to `<b:int>`. Aliases: `>`.|
+| `<a:int> eq <b:int>` | True when `<a:int>` is equal to `<b:int>`. Aliases: `=`, `==`.|
+| `<a:int> ne <b:int>` | True when `<a:int>` is not equal to `<b:int>`. Aliases: `!=`.|
 
 ## The License
 

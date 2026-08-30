@@ -1,6 +1,6 @@
 # The comparison operators in Query Language are lame
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 100
 - TAGS: release,tql
 
@@ -95,3 +95,18 @@ At the end I settled on
 - `!=`
 
 I can't improve this any further.
+
+## NOTE(20260830-153618)
+
+Completely forgor about the `test(1)` set
+
+- `lt`
+- `le`
+- `gt`
+- `ge`
+- `eq`
+- `ne`
+
+This one is cool because all 6 have the same 2 character length and
+`test(1)` is fairly familiar to the shell users. I think it's a
+perfect candidate.
