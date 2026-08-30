@@ -146,19 +146,19 @@ Another problematic symbols are `<` and `>`, which are usually used for file red
 
 | Expression | Description |
 |-|-|
-| `<a:bool> or <b:bool>` | True when `<a:bool>` or `<b:bool>` or both are true. Just a regular [logical disjunction](https://en.wikipedia.org/wiki/Logical_disjunction). |
-| `<a:bool> and <b:bool>` | True when both `<a:bool>` and `<b:bool>` are true. Just a regular [logical conjunction](https://en.wikipedia.org/wiki/Logical_conjunction) |
+| `<a> or <b>` | True when `<a>` or `<b>` or both are true. Just a regular [logical disjunction](https://en.wikipedia.org/wiki/Logical_disjunction). |
+| `<a> and <b>` | True when both `<a>` and `<b>` are true. Just a regular [logical conjunction](https://en.wikipedia.org/wiki/Logical_conjunction) |
 | `:<tag>` | True when a task's `TAGS` property contains `<tag>` |
-| `not <expr:bool>` | True when `<expr:bool>` is false. |
+| `not <expr>` | True when `<expr>` is false. |
 | `tagged` | True when a task has at least one tag in its `TAGS` property. |
 | `any` | Always true for any task. |
 | `priority` | Priority of the task as an integer. |
-| `<a:int> lt <b:int>` | True when `<a:int>` is less than `<b:int>`. Aliases: `<`.|
-| `<a:int> gt <b:int>` | True when `<a:int>` is greater than `<b:int>`. Aliases: `>`|
-| `<a:int> le <b:int>` | True when `<a:int>` is less or equal to `<b:int>`. Aliases: `<=`.|
-| `<a:int> ge <b:int>` | True when `<a:int>` is greater or equal to `<b:int>`. Aliases: `>`.|
-| `<a:int> eq <b:int>` | True when `<a:int>` is equal to `<b:int>`. Aliases: `=`, `==`.|
-| `<a:int> ne <b:int>` | True when `<a:int>` is not equal to `<b:int>`. Aliases: `!=`.|
+| `<a> lt <b>` | True when `<a>` is less than `<b>`. Aliases: `<`.|
+| `<a> gt <b>` | True when `<a>` is greater than `<b>`. Aliases: `>`|
+| `<a> le <b>` | True when `<a>` is less or equal to `<b>`. Aliases: `<=`.|
+| `<a> ge <b>` | True when `<a>` is greater or equal to `<b>`. Aliases: `>`.|
+| `<a> eq <b>` | True when `<a>` is equal to `<b>`. Aliases: `=`, `==`.|
+| `<a> ne <b>` | True when `<a>` is not equal to `<b>`. Aliases: `!=`.|
 
 ## The License
 
