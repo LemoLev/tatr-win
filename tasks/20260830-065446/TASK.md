@@ -2,7 +2,7 @@
 
 - STATUS: OPEN
 - PRIORITY: 100
-- TAGS: bug,tql
+- TAGS: bug,tql,release
 
 Grep for referers.
 

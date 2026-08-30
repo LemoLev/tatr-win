@@ -2,6 +2,6 @@
 
 - STATUS: OPEN
 - PRIORITY: 100
-- TAGS: tql
+- TAGS: tql,release
 
 No description.
