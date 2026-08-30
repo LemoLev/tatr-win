@@ -1,4 +1,4 @@
-# Support more statuses than OPEN and CLOSED
+# Support more statuses along with `OPEN` and `CLOSED`
 
 - STATUS: OPEN
 - PRIORITY: 100

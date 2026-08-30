@@ -26,3 +26,10 @@ Besides it's unclear how do you automatically form such IDs. It must
 be up to the tool to do that. We getting into the territory of
 language models which is a huge complexity for the problem I'm trying
 to solve.
+
+---
+
+The `<HUID>[-few-words-from-the-title]` idea is implemented with
+Extended HUID. See TASK(20260826-204052). But it's intended as a
+mechanism for resolving collisions when working in a team. So I'm not
+sure how much it is applicable here.
