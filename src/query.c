@@ -169,7 +169,8 @@ bool compile_query_primary(String_View original_src, String_View *src, Query *qu
 {
     *src = sv_trim_left(*src);
     if (src->count == 0) {
-        report_compile_query_diagnostic(original_src, src, "ERROR: Expected `:`, `(`, `not`, `any`, or `tagged`.");
+        // TASK(20260830-065446): primary expressions start from more things
+        report_compile_query_diagnostic(original_src, src, "ERROR: Expected `:`, `(`, `not`, `any`, `tagged`.");
         return false;
     }
     // We used to use dot to refer to a tag before. We still accept it for backward compatibility.
