@@ -180,10 +180,12 @@ bool new_run(Command *self, const char *program_name, int argc, char **argv)
     Flag_List tags = {0};
     bool help = false;
     uint64_t priority = 0;
+    char *suffix = NULL;
 
     void *c = flag_c_new(program_name);
     flag_c_list_var(c, &tags, "t", "Tags to add to the new task");
     flag_c_uint64_var(c, &priority, "p", DEFAULT_PRIORITY, "Priority of the new task");
+    flag_c_str_var(c, &suffix, "s", NULL, "Task ID optional suffix");
     flag_c_bool_var(c, &help, "help", false, "Print this help message");
     String_Builder sb_title = {0};
 
@@ -209,7 +211,7 @@ bool new_run(Command *self, const char *program_name, int argc, char **argv)
     char *dir_path = find_relative_tasks_directory();
     if (!dir_path) return false;
 
-    char *id = temp_new_huid();
+    char *id = temp_new_huid(suffix);
     const char *task_path = temp_sprintf("%s/%s", dir_path, id);
     int exists = file_exists(task_path);
     if (exists < 0) return false;
@@ -336,13 +338,17 @@ bool graph_run(Command *self, const char *program_name, int argc, char **argv)
             .hasheq = ht_sv_hasheq,
         }
     };
+    size_t checkpoint = temp_save();
     da_foreach(Task, task, &tasks) {
+        temp_rewind(checkpoint);
         HUIDs *ref = ht_put(&graph, task->id);
         String_View content = task->task_md_content;
         while (content.count > 0) {
             String_View huid = {0};
             if (chop_huid(&content, &huid)) {
-                *ht_put(ref, huid) = true;
+                if (file_exists(temp_sprintf("%s/"SV_Fmt"/TASK.md", dir_path, SV_Arg(huid)))) {
+                    *ht_put(ref, huid) = true;
+                }
             } else {
                 sv_chop_left(&content, 1);
             }

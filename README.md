@@ -12,12 +12,18 @@ project/
   +-20260824-215300
     +-TASK.md
     +-...
+  +-20260830-000403-rexim
+    +-TASK.md
+    +-screenshot.png
+    +-...
   +-...
 ```
 
 Each project at the root has `tasks/` folder which contains sub-folders for each task.
 
 Each task sub-folder is named with a Task ID. The Task ID format is `[0-9]{8}-[0-9]{6}`. Just grab the current date and time and use it as the Task ID. Use UTC timezone so the current timezone is irrelevant. If your Task ID collides with an existing one, just wait one second and try again. ;)
+
+Actually the full format is `[0-9]{8}-[0-9]{6}(-[a-zA-Z0-9\\-]*)?`. So if you work in a team you can agree on individual suffixes for the IDs to slap at the end like `20260829-235855-rexim` or `20260829-235902-01`. Those are valid Task IDs too.
 
 Inside of the task sub-folder there is one mandatory file `TASK.md` which is a markdown file describing the task. The folder may contain other files as attachments to the task. `TASK.md` should link to the attachments as necessary. Try to keep the size of the attachments small, since they are going to be committed to the git repo. Use [ffmpeg](https://ffmpeg.org/) to reencode any screencast to reduce their size as necessary.
 

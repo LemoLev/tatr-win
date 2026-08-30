@@ -1,5 +1,10 @@
 #include "huid.h"
 
+bool is_alnum_or_dash(char x)
+{
+    return isalnum(x) || x == '-';
+}
+
 bool chop_huid(String_View *content, String_View *huid)
 {
     String_View copy = *content;
@@ -14,6 +19,11 @@ bool chop_huid(String_View *content, String_View *huid)
         if (!isdigit(copy.data[0])) return false;
         sv_chop_left(&copy, 1);
     }
+    if (sv_starts_with(copy, SVLIT("-"))) {
+        while (copy.count > 0 && is_alnum_or_dash(copy.items[0])) {
+            sv_chop_left(&copy, 1);
+        }
+    }
     huid->data  = content->data;
     huid->count = copy.data - content->data;
     *content = copy;
@@ -25,11 +35,16 @@ bool is_valid_huid(const char *id)
     for (int i = 0; i < 8; ++i) if (!isdigit(*id++)) return false;
     if (*id++ != '-')                                return false;
     for (int i = 0; i < 6; ++i) if (!isdigit(*id++)) return false;
-    if (*id++ != '\0')                               return false;
+    switch (*id++) {
+    case '\0':  return true;  // Short
+    case '-':   break;        // Extended
+    default:    return false; // Invalid
+    }
+    while (*id) if (!is_alnum_or_dash(*id++))        return false;
     return true;
 }
 
-char *temp_new_huid(void)
+char *temp_new_huid(const char *suffix)
 {
     time_t rawtime;
     time(&rawtime);
@@ -41,5 +56,8 @@ char *temp_new_huid(void)
         timeinfo->tm_hour,
         timeinfo->tm_min,
         timeinfo->tm_sec);
+    if (suffix) {
+        id = temp_sprintf("%s-%s", id, suffix);
+    }
     return id;
 }
