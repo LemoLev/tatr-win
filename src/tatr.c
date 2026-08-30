@@ -257,7 +257,7 @@ bool new_run(Command *self, const char *program_name, int argc, char **argv)
     };
 
     da_foreach(const char *, tag, &tags) {
-        da_append(&task.tags, sv_from_cstr(*tag));
+        parse_tags(&task.tags, sv_from_cstr(*tag));
     }
 
     String_Builder sb_md_content = {0};

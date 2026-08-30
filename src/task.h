@@ -21,6 +21,7 @@ typedef struct {
     size_t capacity;
 } Tags;
 
+void parse_tags(Tags *tags, String_View sv);
 bool tags_contains(Tags tags, String_View tag);
 
 typedef struct {
