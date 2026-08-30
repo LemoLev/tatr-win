@@ -2,7 +2,7 @@
 
 - STATUS: OPEN
 - PRIORITY: 100
-- TAGS: release
+- TAGS: release,tql
 
 lt, gt, lte, gte, etc.
 

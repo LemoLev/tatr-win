@@ -2,6 +2,6 @@
 
 - STATUS: OPEN
 - PRIORITY: 100
-- TAGS: bug
+- TAGS: bug,tql
 
 Grep the referers for the context

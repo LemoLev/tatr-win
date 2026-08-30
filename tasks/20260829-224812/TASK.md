@@ -2,7 +2,7 @@
 
 - STATUS: OPEN
 - PRIORITY: 100
-- TAGS:
+- TAGS: tql
 
 Extracted from TASK(20260829-200218). The traditional operators are
 `<`, `<=`, `>`, `>=`, `=`, `!=`, etc.

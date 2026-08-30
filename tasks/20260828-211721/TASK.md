@@ -2,7 +2,7 @@
 
 - STATUS: OPEN
 - PRIORITY: 100
-- TAGS:
+- TAGS: tql
 
 ## NOTE(20260829-201427)
 
