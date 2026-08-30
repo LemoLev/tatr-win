@@ -78,6 +78,8 @@ $ sudo cp ./build/tatr /usr/local/bin/
 $ tatr help
 ```
 
+It is specifically optimized to be run in compilation mode of Emacs. Not sure how useful it is outside of this use case.
+
 You are welcome to make your own tools.
 
 ### Query Language
