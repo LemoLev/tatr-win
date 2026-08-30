@@ -56,3 +56,29 @@ Another set I came up with
 - `}=`
 - `=`
 - `!=`
+
+`tatr ls not [:bug and priority }= 10]` looks like ass though
+
+## NOTE(20260830-050449)
+
+- `v`
+- `v=`
+- `^`
+- `^=`
+- `=`
+- `!=`
+
+`tatr ls not [:bug and priority ^= 10]`
+
+## NOTE(20260830-050948)
+
+The ХУЯ set
+
+- `-?`
+- `-?=`
+- `+?`
+- `+?=`
+- `=`
+- `!=`
+
+`tatr ls not [:bug and priority +?= 10]`
