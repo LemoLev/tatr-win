@@ -1,7 +1,7 @@
 # Mass rename a tag
 
 - STATUS: OPEN
-- PRIORITY: 100
+- PRIORITY: 110
 - TAGS:
 
 Some command that makes it possible to rename a tag. It should update

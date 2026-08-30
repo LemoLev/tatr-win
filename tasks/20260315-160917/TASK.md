@@ -1,7 +1,7 @@
 # When you have several TASK.md opened, it's unclear which issues they belong to
 
 - STATUS: OPEN
-- PRIORITY: 100
+- PRIORITY: 10
 - TAGS: bug
 
 This is more of a bug of the spec of the task database. All the info

@@ -1,7 +1,7 @@
 # Mass updating tasks by a query
 
 - STATUS: OPEN
-- PRIORITY: 100
+- PRIORITY: 110
 - TAGS:
 
 Adding everything with priority 100 and higher to the scope:

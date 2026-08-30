@@ -26,6 +26,8 @@ Another solution is to change the spec and just limit what kind of tags could be
 
 It gets a bit messy when the unicode starts to get involved.
 
+I feel like just forbidding whitespaces in the names of the tags solves majority of the problems.
+
 ## NOTE(20260830-173544)
 
 Fork from NOTE(20260830-170057)
