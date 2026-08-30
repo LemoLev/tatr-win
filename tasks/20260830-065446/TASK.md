@@ -1,6 +1,6 @@
 # primary expressions start from more things
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 100
 - TAGS: bug,tql,release
 

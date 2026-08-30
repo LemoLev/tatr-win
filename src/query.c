@@ -268,8 +268,16 @@ bool compile_query_primary(String_View original_src, String_View *src, Query *qu
         return true;
     }
 
-    // TASK(20260830-065446): primary expressions start from more things
-    report_compile_query_diagnostic(original_src, token, "ERROR: Unknown keyword `"SV_Fmt"`. Expected keywords `not`, `any`, `tagged`, or `priority`.", SV_Arg(token));
+    report_compile_query_diagnostic(original_src, token, "ERROR: Unexpected start of a primary expression `"SV_Fmt"`.", SV_Arg(token));
+    fprintf(stderr, "What we expect here:\n");
+    fprintf(stderr, "    :<tag>         - checks if task has a tag\n");
+    fprintf(stderr, "    ( <expr> )     - a grouped expression\n");
+    fprintf(stderr, "    [ <expr> ]     - same as previous but for bash users\n");
+    fprintf(stderr, "    not <primary>  - negation of a primary expression\n");
+    fprintf(stderr, "    any            - an expression that always returns true\n");
+    fprintf(stderr, "    tagged         - checks if a task is tagged\n");
+    fprintf(stderr, "    priority       - priority of a task as an integer\n");
+    fprintf(stderr, "    <number>       - a signed integer\n");
     return false;
 }
 
