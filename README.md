@@ -149,3 +149,7 @@ Here is the [Backus–Naur form](https://en.wikipedia.org/wiki/Backus%E2%80%93Na
 | `<expr1:int> not below <expr2:int>` | True when `<expr1:int>` is greater or equal to `<expr2:int>`.|
 | `<expr1:int> equal <expr2:int>` | True when `<expr1:int>` is equal to `<expr2:int>`.|
 | `<expr1:int> not equal <expr2:int>` | True when `<expr1:int>` is not equal to `<expr2:int>`.|
+
+## The License
+
+All the code in this repo is released under [GNU General Public License, version 2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html) license unless stated otherwise (specifically, the files in [./thirdparty/](./thirdparty/) folder have their own corresponding licenses)
