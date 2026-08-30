@@ -248,42 +248,35 @@ bool compile_query_compare(String_View original_src, String_View *src, Query *qu
         if (src->count == 0) break;
         String_View saved_src = *src;
         String_View key = sv_chop_while(src, not_end_of_query_token);
-        if (sv_eq(key, sv_from_cstr("below"))) {
+        if (sv_eq(key, SVLIT("lt")) || sv_eq(key, SVLIT("<"))) {
             if (!compile_query_primary(original_src, src, query)) return false;
             da_append(query, op_lt(*src));
             continue;
         }
-        if (sv_eq(key, sv_from_cstr("above"))) {
+        if (sv_eq(key, SVLIT("lt=")) || sv_eq(key, SVLIT("<="))) {
+            if (!compile_query_primary(original_src, src, query)) return false;
+            da_append(query, op_lte(*src));
+            continue;
+        }
+        if (sv_eq(key, SVLIT("gt")) || sv_eq(key, SVLIT(">"))) {
             if (!compile_query_primary(original_src, src, query)) return false;
             da_append(query, op_gt(*src));
             continue;
         }
-        if (sv_eq(key, sv_from_cstr("equal"))) {
+        if (sv_eq(key, SVLIT("gt=")) || sv_eq(key, SVLIT(">="))) {
+            if (!compile_query_primary(original_src, src, query)) return false;
+            da_append(query, op_gte(*src));
+            continue;
+        }
+        if (sv_eq(key, SVLIT("="))) {
             if (!compile_query_primary(original_src, src, query)) return false;
             da_append(query, op_eq(*src));
             continue;
         }
-        if (sv_eq(key, sv_from_cstr("not"))) {
-            *src = sv_trim_left(*src);
-            saved_src = *src;
-            key = sv_chop_while(src, not_end_of_query_token);
-            if (sv_eq(key, SVLIT("above"))) {
-                if (!compile_query_primary(original_src, src, query)) return false;
-                da_append(query, op_lte(*src));
-                continue;
-            }
-            if (sv_eq(key, SVLIT("below"))) {
-                if (!compile_query_primary(original_src, src, query)) return false;
-                da_append(query, op_gte(*src));
-                continue;
-            }
-            if (sv_eq(key, SVLIT("equal"))) {
-                if (!compile_query_primary(original_src, src, query)) return false;
-                da_append(query, op_neq(*src));
-                continue;
-            }
-            report_compile_query_diagnostic(original_src, &saved_src, "ERROR: Expected keywords `above`, `below`, or `equal`");
-            return false;
+        if (sv_eq(key, SVLIT("!="))) {
+            if (!compile_query_primary(original_src, src, query)) return false;
+            da_append(query, op_neq(*src));
+            continue;
         }
         *src = saved_src;
         break;

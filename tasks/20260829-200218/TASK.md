@@ -82,3 +82,16 @@ The ХУЯ set
 - `!=`
 
 `tatr ls not [:bug and priority +?= 10]`
+
+## NOTE(20260830-064508)
+
+At the end I settled on
+
+- `lt`
+- `lt=`
+- `gt`
+- `gt=`
+- `=`
+- `!=`
+
+I can't improve this any further.

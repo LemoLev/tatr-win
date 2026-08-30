@@ -109,7 +109,7 @@ $ tatr ls not tagged
 All the bugs with priority less than 50:
 
 ```console
-$ tatr ls :bug and priority below 50
+$ tatr ls :bug and priority lt 50
 ```
 
 #### Syntax
@@ -121,7 +121,7 @@ Here is the [Backus–Naur form](https://en.wikipedia.org/wiki/Backus%E2%80%93Na
 <or>              ::= <and> *('or' <and>)
 <and>             ::= <compare> *('and' <compare>)
 <compare>         ::= <primary> *(<compare-op> <primary>)
-<compare-op>      ::= 'below' | 'above' | equal | 'not' 'below' | 'not' 'above' | 'not' 'equal'
+<compare-op>      ::= 'lt' | 'lt=' | 'gt' | 'gt=' | '<' | '<=' | '>' | '>=' | '=' | '!='
 <primary>         ::= <tag>
                     | '(' <expr> ')'
                     | '[' <expr> ']'
@@ -134,6 +134,12 @@ Here is the [Backus–Naur form](https://en.wikipedia.org/wiki/Backus%E2%80%93Na
 <number>          ::= ['-'] 1*<digit>
 ```
 
+The syntax is designed to be used in shell environment without requiring any special escaping.
+
+In shells parenthsis usually have special meaning. Because of that you can use square brackets for grouping expressions `'[' <expr> ']'` along with regular parenthesis `'(' <expr> ')'`.
+
+Another problematic symbols are `<` and `>`, which are usually used for file redirecting. We created aliases for them: `lt` and `gt`. Correspondingly there are `lt=` (less or equal) and `gt=` (greater or equal).
+
 #### Reference
 
 | Expression | Description |
@@ -145,12 +151,12 @@ Here is the [Backus–Naur form](https://en.wikipedia.org/wiki/Backus%E2%80%93Na
 | `tagged` | True when a task has at least one tag in its `TAGS` property. |
 | `any` | Always true for any task. |
 | `priority` | Priority of the task as an integer. |
-| `<expr1:int> below <expr2:int>` | True when `<expr1:int>` is less than `<expr2:int>`.|
-| `<expr1:int> above <expr2:int>` | True when `<expr1:int>` is greater than `<expr2:int>`.|
-| `<expr1:int> not above <expr2:int>` | True when `<expr1:int>` is less or equal to `<expr2:int>`.|
-| `<expr1:int> not below <expr2:int>` | True when `<expr1:int>` is greater or equal to `<expr2:int>`.|
-| `<expr1:int> equal <expr2:int>` | True when `<expr1:int>` is equal to `<expr2:int>`.|
-| `<expr1:int> not equal <expr2:int>` | True when `<expr1:int>` is not equal to `<expr2:int>`.|
+| `<expr1:int> lt <expr2:int>` | True when `<expr1:int>` is less than `<expr2:int>`.|
+| `<expr1:int> gt <expr2:int>` | True when `<expr1:int>` is greater than `<expr2:int>`.|
+| `<expr1:int> lt= <expr2:int>` | True when `<expr1:int>` is less or equal to `<expr2:int>`.|
+| `<expr1:int> gt= <expr2:int>` | True when `<expr1:int>` is greater or equal to `<expr2:int>`.|
+| `<expr1:int> = <expr2:int>` | True when `<expr1:int>` is equal to `<expr2:int>`.|
+| `<expr1:int> != <expr2:int>` | True when `<expr1:int>` is not equal to `<expr2:int>`.|
 
 ## The License
 
