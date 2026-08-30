@@ -18,6 +18,8 @@ We can use `^` as an escape symbol (since Shell hijacks backslash): `{complex ^}
 
 We should also add a section about tokenization to the README.
 
+Shell tokenization may get in the way by turning `{foo     bar}` into `{foo bar}`.
+
 ## NOTE(20260830-170102)
 
 Another solution is to change the spec and just limit what kind of tags could be used in there.
