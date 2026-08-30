@@ -57,3 +57,5 @@ But we already have test with utf8.
 But I don't use any utf8 in the wild.
 
 It feels like tags must have a very strict limitation because they are used in the query language. So they must be in harmony with each other.
+
+Also, it's easier to relax the limit later if needed.
