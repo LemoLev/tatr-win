@@ -1,6 +1,6 @@
 # tasks/tags file should have the separator comma optional
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 100
 - TAGS: release
 

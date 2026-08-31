@@ -461,8 +461,15 @@ bool summary_run(Command *self, const char *program_name, int argc, char **argv)
         for (size_t line_number = 0; sv.count > 0; ++line_number) {
             String_View line = sv_trim(sv_chop_by_delim(&sv, '\n'));
             if (line.count == 0) continue;
-            String_View tag  = sv_trim(sv_chop_by_delim(&line, ','));
-            String_View desc = sv_trim(line);
+            const char *start = line.data;
+            while (line.count && !(isspace(*line.data) || *line.data == ',')) {
+                sv_chop_left(&line, 1);
+            }
+            String_View tag  = sv_from_parts(start, line.data - start);
+            while (line.count && (isspace(*line.data) || *line.data == ',')) {
+                sv_chop_left(&line, 1);
+            }
+            String_View desc = sv_trim_right(line);
             String_View *slot = ht_find(&tags_desc, tag);
             if (slot) {
                 fprintf(stderr, "%s:%zu: WARNING: redefinition of tag description '"SV_Fmt"'\n", tags_desc_path, line_number, SV_Arg(tag));

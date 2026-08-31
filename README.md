@@ -61,9 +61,9 @@ Use [git-blame](https://git-scm.com/docs/git-blame) and [git-log](https://git-sc
 There might be an optional `tasks/tags` file with the following format:
 
 ```
-<tag-name> , <tag-description>
-<tag-name> , <tag-description>
-<tag-name> , <tag-description>
+<tag-name> [,] <tag-description>
+<tag-name> [,] <tag-description>
+<tag-name> [,] <tag-description>
 ...
 ```
 
