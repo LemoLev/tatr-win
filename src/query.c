@@ -16,50 +16,25 @@
 
 void report_compile_query_diagnostic(String_View original_src, String_View src, const char *format, ...) NOB_PRINTF_FORMAT(3, 4);
 
-int is_special(int x)
+int is_bracket(int x)
 {
-    if (x == '<') return true;
-    if (x == '>') return true;
-    if (x == '=') return true;
-    if (x == '(') return true;
-    if (x == ')') return true;
     if (x == '[') return true;
     if (x == ']') return true;
-    if (x == ':') return true;
-    if (x == '.') return true;
-    if (x == '!') return true;
     return false;
 }
 
-int is_not_special_nor_space(int x)
+int is_not_bracket_nor_space(int x)
 {
-    return !is_special(x) && !isspace(x);
+    return !is_bracket(x) && !isspace(x);
 }
 
 String_View chop_next_query_token(String_View *src)
 {
     *src = sv_trim_left(*src);
-
     if (src->count == 0) return *src;
-
-    if (sv_starts_with(*src, SVLIT("<="))) return sv_chop_left(src, 2);
-    if (sv_starts_with(*src, SVLIT(">="))) return sv_chop_left(src, 2);
-    if (sv_starts_with(*src, SVLIT("=="))) return sv_chop_left(src, 2);
-    if (sv_starts_with(*src, SVLIT("!="))) return sv_chop_left(src, 2);
-
-    if (sv_starts_with(*src, SVLIT("<")))  return sv_chop_left(src, 1);
-    if (sv_starts_with(*src, SVLIT(">")))  return sv_chop_left(src, 1);
-    if (sv_starts_with(*src, SVLIT("=")))  return sv_chop_left(src, 1);
-    if (sv_starts_with(*src, SVLIT("(")))  return sv_chop_left(src, 1);
-    if (sv_starts_with(*src, SVLIT(")")))  return sv_chop_left(src, 1);
-    if (sv_starts_with(*src, SVLIT("[")))  return sv_chop_left(src, 1);
-    if (sv_starts_with(*src, SVLIT("]")))  return sv_chop_left(src, 1);
-
-    if (sv_starts_with(*src, SVLIT(":")))  return sv_chop_left(src, 1);
-    if (sv_starts_with(*src, SVLIT(".")))  return sv_chop_left(src, 1);
-
-    // TASK(20260830-163947): TQL supports less tags than the spec allows to define
-    return sv_chop_while(src, is_not_special_nor_space);
+    if (sv_starts_with(*src, SVLIT("["))) return sv_chop_left(src, 1);
+    if (sv_starts_with(*src, SVLIT("]"))) return sv_chop_left(src, 1);
+    return sv_chop_while(src, is_not_bracket_nor_space);
 }
 
 void print_op(Op op)
@@ -212,23 +187,23 @@ bool compile_query_primary(String_View original_src, String_View *src, Query *qu
 
     // We used to use dot to refer to a tag before. We still accept it for backward compatibility.
     // But we may remove it at some point in the future.
-    if (sv_eq(token, SVLIT(".")) || sv_eq(token, SVLIT(":"))) {
-        if (sv_eq(token, SVLIT("."))) {
+    if (sv_starts_with(token, SVLIT(":")) || sv_starts_with(token, SVLIT("."))) {
+        if (sv_starts_with(token, SVLIT("."))) {
             report_compile_query_diagnostic(original_src, token, "WARNING: Using `.` to refer to tags is deprecated and will be removed in the future. Use `:` instead.");
         }
-        String_View tag = chop_next_query_token(src);
-        da_append(query, op_tag(token, tag));
+        if (token.count == 1) {
+            report_compile_query_diagnostic(original_src, token, "ERROR: empty tag\n");
+            return false;
+        }
+        sv_chop_left(&token, 1);
+        da_append(query, op_tag(token, token));
         return true;
     }
 
-    if (sv_eq(token, SVLIT("(")) || sv_eq(token, SVLIT("["))) {
+    if (sv_eq(token, SVLIT("["))) {
         char start = *token.data;
         if (!compile_query_expr(original_src, src, query)) return false;
         token = chop_next_query_token(src);
-        if (start == '(' && !sv_eq(token, SVLIT(")"))) {
-            report_compile_query_diagnostic(original_src, token, "ERROR: Expected `)`.");
-            return false;
-        }
         if (start == '[' && !sv_eq(token, SVLIT("]"))) {
             report_compile_query_diagnostic(original_src, token, "ERROR: Expected `]`.");
             return false;
@@ -271,7 +246,6 @@ bool compile_query_primary(String_View original_src, String_View *src, Query *qu
     fprintf(stderr, "What are primary expressions:\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "    :<tag>         - checks if task has a tag\n");
-    fprintf(stderr, "    ( <expr> )     - grouped expression\n");
     fprintf(stderr, "    [ <expr> ]     - same as previous but for Bash users\n");
     fprintf(stderr, "    not <primary>  - negation of a primary expression\n");
     fprintf(stderr, "    any            - expression that always returns true\n");
@@ -294,32 +268,32 @@ bool compile_query_compare(String_View original_src, String_View *src, Query *qu
     for (;;) {
         String_View saved_src = *src;
         String_View token = chop_next_query_token(src);
-        if (sv_eq(token, SVLIT("lt")) || sv_eq(token, SVLIT("<"))) {
+        if (sv_eq(token, SVLIT("lt"))) {
             if (!compile_query_primary(original_src, src, query)) return false;
             da_append(query, op_lt(token));
             continue;
         }
-        if (sv_eq(token, SVLIT("le")) || sv_eq(token, SVLIT("<="))) {
+        if (sv_eq(token, SVLIT("le"))) {
             if (!compile_query_primary(original_src, src, query)) return false;
             da_append(query, op_lte(token));
             continue;
         }
-        if (sv_eq(token, SVLIT("gt")) || sv_eq(token, SVLIT(">"))) {
+        if (sv_eq(token, SVLIT("gt"))) {
             if (!compile_query_primary(original_src, src, query)) return false;
             da_append(query, op_gt(token));
             continue;
         }
-        if (sv_eq(token, SVLIT("ge")) || sv_eq(token, SVLIT(">="))) {
+        if (sv_eq(token, SVLIT("ge"))) {
             if (!compile_query_primary(original_src, src, query)) return false;
             da_append(query, op_gte(token));
             continue;
         }
-        if (sv_eq(token, SVLIT("eq")) || sv_eq(token, SVLIT("=")) || sv_eq(token, SVLIT("=="))) {
+        if (sv_eq(token, SVLIT("eq"))) {
             if (!compile_query_primary(original_src, src, query)) return false;
             da_append(query, op_eq(token));
             continue;
         }
-        if (sv_eq(token, SVLIT("ne")) || sv_eq(token, SVLIT("!="))) {
+        if (sv_eq(token, SVLIT("ne"))) {
             if (!compile_query_primary(original_src, src, query)) return false;
             da_append(query, op_neq(token));
             continue;
@@ -378,8 +352,7 @@ bool compile_query(String_View original_src, String_View *src, Query *query)
         fprintf(stderr, "Supported infix operators:\n");
         fprintf(stderr, "\n");
         fprintf(stderr, "    and  or                  - logical operators\n");
-        fprintf(stderr, "    <  <=  >  >=  =  ==  !=  - comparison operators\n");
-        fprintf(stderr, "    lt  le  gt  ge  eq  ne   - same as above but for Bash users\n");
+        fprintf(stderr, "    lt  le  gt  ge  eq  ne   - comparison operators\n");
         fprintf(stderr, "\n");
         report_compile_query_diagnostic(original_src, end, "ERROR: Unexpected infix operator `"SV_Fmt"`", SV_Arg(end));
         return false;

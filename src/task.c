@@ -15,8 +15,6 @@
 #include "task.h"
 #include "ht.h"
 
-void parse_tags(Tags *tags, String_View sv);
-
 bool tags_contains(Tags tags, String_View tag)
 {
     for (size_t i = 0; i < tags.count; ++i) {
@@ -180,10 +178,18 @@ bool task_matches_tags(const Task *task, const char **tags, size_t tags_count)
 
 void parse_tags(Tags *tags, String_View sv)
 {
-    sv = sv_trim_left(sv);
+    while (sv.count && (isspace(*sv.data) || *sv.data == ',')) {
+        sv_chop_left(&sv, 1);
+    }
     while (sv.count > 0) {
-        String_View tag = sv_trim(sv_chop_by_delim(&sv, ','));
+        const char *start = sv.data;
+        while (sv.count && !(isspace(*sv.data) || *sv.data == ',')) {
+            sv_chop_left(&sv, 1);
+        }
+        String_View tag = sv_from_parts(start, sv.data - start);
         da_append(tags, tag);
-        sv = sv_trim_left(sv);
+        while (sv.count && (isspace(*sv.data) || *sv.data == ',')) {
+            sv_chop_left(&sv, 1);
+        }
     }
 }

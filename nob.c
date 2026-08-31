@@ -127,28 +127,24 @@ bool assert_test_output(const char *output_label, String_View expected_stdout, S
 bool test_ls_query_negation_of_complex_expression_in_parens(Test_Runner *r)
 {
     nob_log(INFO, "Running %s...", __func__);
-    if (!run_query_payload(r, "not (tagged or :bug and :test and :foo and :bar)")) return false;
+    if (!run_query_payload(r, "not [tagged or :bug and :test and :foo and :bar]")) return false;
     if (!expect_success(r)) return false;
     if (!assert_test_output(
         "STDOUT",
         sv_from_cstr(
             "TOKENS:\n"
             "    not\n"
-            "    (\n"
+            "    [\n"
             "    tagged\n"
             "    or\n"
-            "    :\n"
-            "    bug\n"
+            "    :bug\n"
             "    and\n"
-            "    :\n"
-            "    test\n"
+            "    :test\n"
             "    and\n"
-            "    :\n"
-            "    foo\n"
+            "    :foo\n"
             "    and\n"
-            "    :\n"
-            "    bar\n"
-            "    )\n"
+            "    :bar\n"
+            "    ]\n"
             "\n"
             "OPS:\n"
             "    OP_TAGGED\n"
@@ -170,23 +166,20 @@ bool test_ls_query_negation_of_complex_expression_in_parens(Test_Runner *r)
 bool test_ls_query_not_stuck_to_open_paren(Test_Runner *r)
 {
     nob_log(INFO, "Running %s...", __func__);
-    if (!run_query_payload(r, "not(:bug and :test) and :query")) return false;
+    if (!run_query_payload(r, "not[:bug and :test] and :query")) return false;
     if (!expect_success(r)) return false;
     if (!assert_test_output(
         "STDOUT",
         sv_from_cstr(
             "TOKENS:\n"
             "    not\n"
-            "    (\n"
-            "    :\n"
-            "    bug\n"
+            "    [\n"
+            "    :bug\n"
             "    and\n"
-            "    :\n"
-            "    test\n"
-            "    )\n"
+            "    :test\n"
+            "    ]\n"
             "    and\n"
-            "    :\n"
-            "    query\n"
+            "    :query\n"
             "\n"
             "OPS:\n"
             "    OP_TAG bug\n"
@@ -213,8 +206,7 @@ bool test_ls_query_report_error_utf8(Test_Runner *r)
             "Supported infix operators:\n"
             "\n"
             "    and  or                  - logical operators\n"
-            "    <  <=  >  >=  =  ==  !=  - comparison operators\n"
-            "    lt  le  gt  ge  eq  ne   - same as above but for Bash users\n"
+            "    lt  le  gt  ge  eq  ne   - comparison operators\n"
             "\n"
             ":привет hello\n"
             "        ^\n"
@@ -247,42 +239,6 @@ bool test_ls_query_priority_above_20(Test_Runner *r)
         "STDERR",
         (String_View){0},
         sb_to_sv(r->sb_stderr))) return false;
-    nob_log(INFO, "OK");
-    return true;
-}
-
-bool test_ls_query_only_matching_brackets(Test_Runner *r)
-{
-    nob_log(INFO, "Running %s...", __func__);
-
-    if (!run_query_payload(r, "not [:bug or :release)")) return false;
-    if (!expect_failure(r)) return false;
-    if (!assert_test_output(
-        "STDOUT",
-        SVLIT(""),
-        sb_to_sv(r->sb_stdout))) return false;
-    if (!assert_test_output(
-        "STDERR",
-        SVLIT(
-            "not [:bug or :release)\n"
-            "                     ^\n"
-            "ERROR: Expected `]`.\n"),
-        sb_to_sv(r->sb_stderr))) return false;
-
-    if (!run_query_payload(r, "not (:bug or :release]")) return false;
-    if (!expect_failure(r)) return false;
-    if (!assert_test_output(
-        "STDOUT",
-        SVLIT(""),
-        sb_to_sv(r->sb_stdout))) return false;
-    if (!assert_test_output(
-        "STDERR",
-        SVLIT(
-            "not (:bug or :release]\n"
-            "                     ^\n"
-            "ERROR: Expected `)`.\n"),
-        sb_to_sv(r->sb_stderr))) return false;
-
     nob_log(INFO, "OK");
     return true;
 }
@@ -428,7 +384,6 @@ int main(int argc, char **argv)
         if (!test_ls_query_not_stuck_to_open_paren(&r)) return 1;
         if (!test_ls_query_report_error_utf8(&r)) return 1;
         if (!test_ls_query_priority_above_20(&r)) return 1;
-        if (!test_ls_query_only_matching_brackets(&r)) return 1;
     }
 
     if (run) {

@@ -45,10 +45,12 @@ The format of `TASK.md`:
 
 - STATUS: (OPEN|CLOSED)
 - PRIORITY: <number>
-- TAGS: <comma-separated-list-of-tags-without-trailing-whitespaces>
+- TAGS: <comma-and-whitespace-separated-list-of-tags>
 
 [description]
 ```
+
+The `TAGS` property contains the list of tags separated by commas and whitespaces. `TAGS: foo,bar,baz` defines 3 tags. `TAGS: foo, hello  world` also defines 3 tags. You can use these tags to group tasks into categories. Like `bug` or `enhancement`.
 
 As you work on the task feel free to append any discovered details about the task to the description.
 
@@ -82,7 +84,7 @@ It is specifically optimized to be run in compilation mode of Emacs. Not sure ho
 
 You are welcome to make your own tools.
 
-### Query Language
+### Tatr Query Language (TQL)
 
 Query language is used in `tatr ls` command to select a set of tasks.
 
@@ -121,26 +123,25 @@ Here is the [Backus–Naur form](https://en.wikipedia.org/wiki/Backus%E2%80%93Na
 <or>              ::= <and> *('or' <and>)
 <and>             ::= <compare> *('and' <compare>)
 <compare>         ::= <primary> *(<compare-op> <primary>)
-<compare-op>      ::= <compare-test> | <compare-trad>
-<compare-test>    ::= 'lt' | 'le' | 'gt' | 'ge' | 'eq' | 'ne'
-<compare-trad>    ::= '<' | '<=' | '>' | '>=' | '=' | '==' | '!='
+<compare-op>      ::= 'lt' | 'le' | 'gt' | 'ge' | 'eq' | 'ne'
 <primary>         ::= <tag>
-                    | '(' <expr> ')'
                     | '[' <expr> ']'
                     | 'not' <primary>
                     | 'any'
                     | 'tagged'
                     | 'priority'
                     | <number>
-<tag>             ::= ':' 1*<any character except ','>
+<tag>             ::= ':' 1*<any-character-except-whitespaces-and-square-brackets>
 <number>          ::= ['-'] 1*<digit>
 ```
 
 The syntax is designed to be used in shell environment without requiring any special escaping.
 
-In shells parenthsis usually have special meaning. Because of that you can use square brackets for grouping expressions `'[' <expr> ']'` along with regular parenthesis `'(' <expr> ')'`.
+In shells parenthsis usually have special meaning. Because of that you can use square brackets for grouping expressions `'[' <expr> ']'`.
 
-Another problematic symbols are `<` and `>`, which are usually used for file redirecting. Which means we can't easily use traditional comparison operators (even though we support them, you just have to escape them). We created aliases following the [test(1)](https://www.man7.org/linux/man-pages/man1/test.1.html) utility convention: `lt`, `le`, `gt`, `ge`, `eq`, and `ne`.
+Another problematic symbols are `<` and `>`, which are usually used for file redirecting. Which means we can't easily use traditional comparison operators. So we are following the [test(1)](https://www.man7.org/linux/man-pages/man1/test.1.html) utility convention: `lt`, `le`, `gt`, `ge`, `eq`, and `ne`.
+
+Since brackets have a special meaning in TQL, if you have any tags that contain them, you probably won't be able to filter by them (even though the specs do not explicitly prohibit square brackets in the tags). Just don't use square brackets in the tags if you are using `tatr` I guess.
 
 #### Reference
 
@@ -153,12 +154,12 @@ Another problematic symbols are `<` and `>`, which are usually used for file red
 | `tagged` | True when a task has at least one tag in its `TAGS` property. |
 | `any` | Always true for any task. |
 | `priority` | Priority of the task as an integer. |
-| `<a> lt <b>` | True when `<a>` is less than `<b>`. Aliases: `<`.|
-| `<a> gt <b>` | True when `<a>` is greater than `<b>`. Aliases: `>`|
-| `<a> le <b>` | True when `<a>` is less or equal to `<b>`. Aliases: `<=`.|
-| `<a> ge <b>` | True when `<a>` is greater or equal to `<b>`. Aliases: `>`.|
-| `<a> eq <b>` | True when `<a>` is equal to `<b>`. Aliases: `=`, `==`.|
-| `<a> ne <b>` | True when `<a>` is not equal to `<b>`. Aliases: `!=`.|
+| `<a> lt <b>` | True when `<a>` is less than `<b>`.|
+| `<a> gt <b>` | True when `<a>` is greater than `<b>`.|
+| `<a> le <b>` | True when `<a>` is less or equal to `<b>`.|
+| `<a> ge <b>` | True when `<a>` is greater or equal to `<b>`.|
+| `<a> eq <b>` | True when `<a>` is equal to `<b>`.|
+| `<a> ne <b>` | True when `<a>` is not equal to `<b>`.|
 
 ## The License
 

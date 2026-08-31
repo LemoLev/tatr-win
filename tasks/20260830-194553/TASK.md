@@ -1,4 +1,4 @@
-# A command to searcher referers of a task
+# A command to search referers of a task
 
 - STATUS: OPEN
 - PRIORITY: 100

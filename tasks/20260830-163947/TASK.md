@@ -1,6 +1,6 @@
 # TQL supports less tags than the spec allows to define
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 100
 - TAGS: tql,release
 
@@ -59,3 +59,7 @@ But I don't use any utf8 in the wild.
 It feels like tags must have a very strict limitation because they are used in the query language. So they must be in harmony with each other.
 
 Also, it's easier to relax the limit later if needed.
+
+## NOTE(20260831-045755)
+
+I think this problem occured because I overcomplicated TQL. I cut down on all the aliases and updated the spec to treat commas as whitespace and now only tags with square brackets cannot be queries using `tatr`. Which is I think a reasonable limitation for now which I documented in the README.
