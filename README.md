@@ -86,7 +86,7 @@ You are welcome to make your own tools.
 
 ### Tatr Query Language (TQL)
 
-Query language is used in `tatr ls` command to select a set of tasks.
+The Query language that is used in `tatr ls` command to select a set of tasks.
 
 #### Examples
 
@@ -137,19 +137,19 @@ Here is the [Backus–Naur form](https://en.wikipedia.org/wiki/Backus%E2%80%93Na
 
 The syntax is designed to be used in shell environment without requiring any special escaping.
 
-In shells parenthsis usually have special meaning. Because of that you can use square brackets for grouping expressions `'[' <expr> ']'`.
+In shells parenthsis usually have special meaning. Because of that we use square brackets for grouping expressions `'[' <expr> ']'`.
 
 Another problematic symbols are `<` and `>`, which are usually used for file redirecting. Which means we can't easily use traditional comparison operators. So we are following the [test(1)](https://www.man7.org/linux/man-pages/man1/test.1.html) utility convention: `lt`, `le`, `gt`, `ge`, `eq`, and `ne`.
 
-Since brackets have a special meaning in TQL, if you have any tags that contain them, you probably won't be able to filter by them (even though the specs do not explicitly prohibit square brackets in the tags). Just don't use square brackets in the tags if you are using `tatr` I guess.
+Since brackets have a special meaning in TQL, if you have any tags that contain them, you probably won't be able to filter by them (even though the specs do not explicitly prohibit square brackets in the tags). Just don't use square brackets in the tags if you are using `tatr` I guess. I may do something about that later.
 
 #### Reference
 
 | Expression | Description |
 |-|-|
 | `<a> or <b>` | True when `<a>` or `<b>` or both are true. Just a regular [logical disjunction](https://en.wikipedia.org/wiki/Logical_disjunction). |
-| `<a> and <b>` | True when both `<a>` and `<b>` are true. Just a regular [logical conjunction](https://en.wikipedia.org/wiki/Logical_conjunction) |
-| `:<tag>` | True when a task's `TAGS` property contains `<tag>` |
+| `<a> and <b>` | True when both `<a>` and `<b>` are true. Just a regular [logical conjunction](https://en.wikipedia.org/wiki/Logical_conjunction). |
+| `:<tag>` | True when a task's `TAGS` property contains `<tag>`. |
 | `not <expr>` | True when `<expr>` is false. |
 | `tagged` | True when a task has at least one tag in its `TAGS` property. |
 | `any` | Always true for any task. |
