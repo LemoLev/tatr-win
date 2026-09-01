@@ -21,7 +21,7 @@ output.
 ---
 
 Having more than 2 status means that we may also wanna filter by
-them. But at that point status because just another tag but
+them. But at that point status becomes just another tag but
 special. Not sure what to do about it.
 
 Maybe if the people want to kanban this entire thing they should just
@@ -29,7 +29,7 @@ use tags for that?
 
 ---
 
-`STATUS` is just yet another tag. What we just consider a task closed
+`STATUS` is just yet another tag. What if we just consider a task closed
 if it has tag `CLOSED` and for backward compatibility, during the
 parsing just append the value of `STATUS` to the `TAGS` list?
 
@@ -46,7 +46,7 @@ Having `STATUS` being another tag messes with `tatr-summary` command:
 
 ---
 
-For now I just implemented so when the status is not "CLOSED" it's
+For now I just implemented it so when the status is not "CLOSED" it's
 considered "OPEN". No filtering by specific status string is provided
 because status can be only either "OPEN" or "CLOSED". An invalid
 status string is treated as "OPEN" purely for convenience so the user
