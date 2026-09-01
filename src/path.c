@@ -101,13 +101,22 @@ char *path_render_cstr(String_Builder *sb, Path path)
 void path_parse(Path *path, String_View sv)
 {
     path->count = 0;
-#ifdef _WIN32
-    TODO("path_parse on Windows");
-#endif // _WIN32
+#ifdef _WIN32 // Windows
+    while (sv.count > 0) {
+        String_View c = sv_chop_by_delim(&sv, '\\');
+        if (path->count == 0) {
+            da_append(path, SVLIT(""));
+            path->disk = c;
+        }
+        else
+            da_append(path, c);
+    }
+#else // Linux/BSD
     while (sv.count > 0) {
         String_View c = sv_chop_by_delim(&sv, '/');
         da_append(path, c);
     }
+#endif
 }
 
 bool test_path_parse_and_render(void)

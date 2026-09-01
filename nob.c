@@ -294,7 +294,8 @@ const char *get_current_date(void)
     sb_appendf(&sb, "%02d:", timeinfo->tm_hour);
     sb_appendf(&sb, "%02d:", timeinfo->tm_min);
     sb_appendf(&sb, "%02d ", timeinfo->tm_sec);
-    sb_appendf(&sb, "%s",    timeinfo->tm_zone);
+    // sb_appendf(&sb, "%s",    timeinfo->tm_zone);
+    // /\ didn't compile for me, so UTC it is.
     sb_append_null(&sb);
     return sb.items;
 }
@@ -326,7 +327,7 @@ int main(int argc, char **argv)
     Compiler compiler;
     if (!compiler_by_name(compiler_name, &compiler)) {
         nob_log(ERROR, "Unknown compiler \"%s\"", compiler_name);
-        nob_log(ERROR, "Supported compilers:", compiler_name);
+        nob_log(ERROR, "Supported compilers:");
         for (int i = 0; i < __compiler_count; ++i) {
             nob_log(ERROR, "  %s", compiler_names[i]);
         }
