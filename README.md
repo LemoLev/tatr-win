@@ -82,6 +82,8 @@ $ tatr help
 
 It is specifically optimized to be run in compilation mode of Emacs. Not sure how useful it is outside of this use case.
 
+We only support Linux right now But I have tasks to add [Windows](./tasks/20260825-170729/TASK.md) and [MacOS](./tasks/20260901-063204/TASK.md) support in the future.
+
 You are welcome to make your own tools.
 
 ### Tatr Query Language (TQL)
