@@ -1,7 +1,7 @@
 # Add -help to every tatr subcommand
 
-- STATUS: OPEN
+- STATUS: CLOSED
 - PRIORITY: 100
 - TAGS: release
 
-No description.
+Though, `tatr-help` and `tatr-version` probably don't need it right now.

@@ -92,18 +92,34 @@ struct Command {
 
 void print_command_usage(Command *command, const char *program_name, void *c)
 {
-    fprintf(stderr, "Usage: %s %s %s\n", program_name, command->name, command->signature);
+    if (command->signature) {
+        fprintf(stderr, "Usage: %s %s %s\n", program_name, command->name, command->signature);
+    } else {
+        fprintf(stderr, "Usage: %s %s\n", program_name, command->name);
+    }
     fprintf(stderr, "OPTIONS:\n");
     flag_c_print_options(c, stderr);
 }
 
 bool init_run(Command *self, const char *program_name, int argc, char **argv)
 {
-    UNUSED(self);
-    UNUSED(program_name);
-    UNUSED(argc);
-    UNUSED(argv);
+    bool help = false;
+    void *c = flag_c_new(program_name);
+    flag_c_bool_var(c, &help, "help", false, "Print this help message");
+
+    if (!flag_c_parse(c, argc, argv)) {
+        print_command_usage(self, program_name, c);
+        flag_c_print_error(c, stderr);
+        return false;
+    }
+
+    if (help) {
+        print_command_usage(self, program_name, c);
+        return true;
+    }
+
     if (!mkdir_if_not_exists("./tasks/")) return false;
+
     return true;
 }
 
@@ -421,10 +437,20 @@ bool ref_run(Command *self, const char *program_name, int argc, char **argv)
 
 bool graph_run(Command *self, const char *program_name, int argc, char **argv)
 {
-    UNUSED(self);
-    UNUSED(program_name);
-    UNUSED(argc);
-    UNUSED(argv);
+    bool help = false;
+    void *c = flag_c_new(program_name);
+    flag_c_bool_var(c, &help, "help", false, "Print this help message");
+
+    if (!flag_c_parse(c, argc, argv)) {
+        print_command_usage(self, program_name, c);
+        flag_c_print_error(c, stderr);
+        return false;
+    }
+
+    if (help) {
+        print_command_usage(self, program_name, c);
+        return true;
+    }
 
     char *dir_path = find_relative_tasks_directory();
     if (!dir_path) return false;
@@ -671,7 +697,7 @@ Command commands[] = {
     },
     {
         .name = "graph",
-        .description = "Generate graph of tasks cross-referring to each other",
+        .description = "Generate graph of tasks cross-referring to each other. This command is largely useless right now.",
         .run = graph_run,
     },
     {
