@@ -36,7 +36,6 @@ typedef struct {
 void print_task(const char *rel_path, Task *task);
 void append_task_md_content(String_Builder *sb, Task task);
 
-// TASK(20260308-163429): Tasks array should be a hash table
 typedef struct {
     Task *items;
     size_t count;
