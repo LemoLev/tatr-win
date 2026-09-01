@@ -344,6 +344,7 @@ int main(int argc, char **argv)
 
     if (!mkdir_if_not_exists(BUILD_FOLDER)) return 1;
 
+    // TASK(20260901-051445): If git state is dirty the baked git hash should indicate that
     cmd_append(&cmd, "git");
     cmd_append(&cmd, "rev-parse");
     cmd_append(&cmd, "HEAD");

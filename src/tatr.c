@@ -342,6 +342,83 @@ bool find_run(Command *self, const char *program_name, int argc, char **argv)
     return true;
 }
 
+bool ref_run(Command *self, const char *program_name, int argc, char **argv)
+{
+    Path dir_path = {0};
+    Path cwd_path = {0};
+    Path rel_path = {0};
+    String_Builder sb_path = {0};
+    Cmd cmd = {0};
+
+    bool help = false;
+
+    void *c = flag_c_new(program_name);
+    flag_c_bool_var(c, &help, "help", false, "Print this help message");
+
+    if (!flag_c_parse(c, argc, argv)) {
+        print_command_usage(self, program_name, c);
+        flag_c_print_error(c, stderr);
+        return false;
+    }
+
+    const char *huid = NULL;
+
+    while (argc > 0) {
+        if (!flag_c_parse(c, argc, argv)) {
+            print_command_usage(self, program_name, c);
+            flag_c_print_error(c, stderr);
+            return false;
+        }
+
+        argc = flag_c_rest_argc(c);
+        argv = flag_c_rest_argv(c);
+
+        if (argc > 0) {
+            if (huid != NULL) {
+                print_command_usage(self, program_name, c);
+                nob_log(ERROR, "Several HUIDs is not supported");
+                return false;
+            }
+
+            huid = shift(argv, argc);
+            if (!is_valid_huid(huid)) {
+                print_command_usage(self, program_name, c);
+                nob_log(ERROR, "`%s` is not a valid HUID. Valid HUID matches regexp %s", huid, HUID_REGEXP_FOR_USER_REPORT_PURPOSES);
+                return false;
+            }
+        }
+    }
+
+    if (help) {
+        print_command_usage(self, program_name, c);
+        return true;
+    }
+
+    if (!find_tasks_database(&dir_path))  return false;
+    if (!get_current_dir_path(&cwd_path)) return false;
+    path_relative(&rel_path, cwd_path, dir_path);
+
+    if (huid == NULL) {
+        if (!(rel_path.count == 1 && sv_eq(da_last(&rel_path), SVLIT("..")))) {
+            nob_log(ERROR, "You are not inside any task folder. Pass the ID of a task as an argument to search for referers of that task.");
+            return false;
+        }
+        huid = temp_sv_to_cstr(da_last(&cwd_path));
+    }
+
+    da_append(&rel_path, SVLIT(".."));
+
+    // TASK(20260901-051338): Make the grep command configurable for `tatr-ref`
+    cmd_append(&cmd, "grep");
+    cmd_append(&cmd, "--exclude-dir=.git");
+    cmd_append(&cmd, "-rn");
+    cmd_append(&cmd, huid);
+    cmd_append(&cmd, path_render_cstr(&sb_path, rel_path));
+    if (!cmd_run(&cmd)) return false;
+
+    return true;
+}
+
 bool graph_run(Command *self, const char *program_name, int argc, char **argv)
 {
     UNUSED(self);
@@ -585,6 +662,12 @@ Command commands[] = {
         .signature = "<HUID> [OPTIONS]",
         .description = "Find the task with a given HUID",
         .run = find_run,
+    },
+    {
+        .name = "ref",
+        .signature = "[HUID]",
+        .description = "Find referers of the task",
+        .run = ref_run,
     },
     {
         .name = "graph",
