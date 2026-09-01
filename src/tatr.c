@@ -692,7 +692,7 @@ Command commands[] = {
     {
         .name = "ref",
         .signature = "[HUID]",
-        .description = "Find referers of the task",
+        .description = "Finds referers of the task. Basically greps the Task ID over entirety of the repo. If ran inside of a task folder automatically picks up the ID of that task.",
         .run = ref_run,
     },
     {

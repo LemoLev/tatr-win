@@ -1,4 +1,4 @@
-# **Ta**sk **Tr**acker
+# Task Tracker
 
 This is an improvised Tasks system, because I needed something more powerful than just plane TODOs in the Source Code of my projects, yet I didn't want to install a full blown Issue Tracker System.
 
